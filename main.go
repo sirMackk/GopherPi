@@ -85,6 +85,7 @@ func IndexMedia(w http.ResponseWriter, req *http.Request) {
 //}
 
 //admin-funcs
+//users
 func IndexAdmin(w http.ResponseWriter, req *http.Request) {
     //fmt.Fprint(w, "Admin Index")
     templates.Execute(w, nil)
@@ -112,7 +113,31 @@ func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
     }
 }
 
+func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
+    vars := mux.Vars(req)
+    id := vars["id"]
+    switch req.Method {
+    case "GET":
+      var user models.User
+      err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
+      if err != nil { panic(err) }
+      templates.Execute(w, user)
+    case "DELETE":
+        fmt.Println("deleting")
+        _, err := dbmap.Exec("delete from users where Id = ?", id)
+        if err != nil { panic(err) }
+        //http.Redirect(w, req, "/admin/users", 301)
+    }
+}
 
+func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
+    vars := mux.Vars(req)
+    id := vars["id"]
+    var user models.User
+    err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
+    if err != nil { panic(err) }
+    templates["newadminusers.html"].ExecuteTemplate(w, "base", user)
+}
 
 //authentication
 func Login(w http.ResponseWriter, req *http.Request) {
@@ -224,6 +249,8 @@ func main() {
     router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
     router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
     router.HandleFunc("/admin/users/new", AuthWrapper(NewAdminUsers))
+    router.HandleFunc("/admin/users/{id}", AuthWrapper(ShowAdminUsers))
+    router.HandleFunc("/admin/users/{id}/edit", AuthWrapper(EditAdminUsers))
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
@@ -232,5 +259,4 @@ func main() {
     err := http.ListenAndServe(":3000", nil)
     if err != nil { panic(err) }
 }
-
 
