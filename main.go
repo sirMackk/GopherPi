@@ -22,6 +22,7 @@ func logPanic(function HandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         if r := recover(); r != nil {
             //Log to file too
+            fmt.Fprint(w, fmt.Sprintf("Error: %s", r))
             log.Println(r)
         }
         function(w, req)
@@ -29,6 +30,7 @@ func logPanic(function HandleFunc) HandleFunc {
 }
 
 func setHeaders(function HandleFunc) HandleFunc {
+    //setup to handle json here? yeah...
     return func(w http.ResponseWriter, req *http.Request) {
         w.Header().Set("Content-Type", "text/html")
         function(w, req)
@@ -41,13 +43,17 @@ func checkAuth(function HandleFunc) HandleFunc {
         if session.Values["loggedin"] == true {
             function(w, req)
         } else {
-            http.Redirect(w, req, "/login", 403)
+            http.Redirect(w, req, "/login", 403) //302
         }
     }
 }
 
 func HandleWrapper(function HandleFunc) HandleFunc {
     return logPanic(setHeaders(function))
+}
+
+func AuthWrapper(function HandleFunc) HandleFunc {
+    return logPanic(checkAuth(setHeaders(function)))
 }
 
 
@@ -78,21 +84,46 @@ func IndexMedia(w http.ResponseWriter, req *http.Request) {
     //}
 //}
 
-//admin
+//admin-funcs
 func IndexAdmin(w http.ResponseWriter, req *http.Request) {
-    fmt.Fprint(w, "Admin Index")
+    //fmt.Fprint(w, "Admin Index")
+    templates.Execute(w, nil)
 }
+
+func IndexAdminUsers(w http.ResponseWriter, req *http.Request) {
+    var users []models.User
+    _, err := dbmap.Select(&users, "select * from users order by Id")
+    if err != nil { panic(err) }
+    err = templates.Execute(w, users)
+    if err != nil { panic(err) }
+}
+
+func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
+    switch req.Method {
+    case "GET":
+      templates.Execute(w, nil)
+    case "POST":
+      //sum validations
+      uname := req.FormValue("username")
+      pword := hashPwd(req.FormValue("password"))
+      user, err := models.NewUser(dbmap, uname, pword)
+      if err != nil { panic(err) }
+      http.Redirect(w, req, fmt.Sprintf("/admin/users/%d", user.Id), 301)
+    }
+}
+
 
 
 //authentication
 func Login(w http.ResponseWriter, req *http.Request) {
     switch req.Method {
     case "GET":
-        templates.Execute(w, req)
+        //med := new(models.User)
+        templates.Execute(w, nil)
     case "POST":
         username := req.FormValue("username")
         password := req.FormValue("password")
-        if user, err := Authenticate(username, password); err != nil {
+        if user, err := Authenticate(username, password); err == nil {
             session, _ := store.Get(req, "gopi_media")
             session.Values["username"] = username
             session.Values["user_id"] = user.Id
@@ -102,6 +133,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
             if err != nil { panic(err) }
             http.Redirect(w, req, "/", 302)
         } else {
+            log.Println(err)
             http.Redirect(w, req, "/login", 403)
         }
     }
@@ -111,6 +143,8 @@ func Logout(w http.ResponseWriter, req *http.Request) {
     session, _ := store.Get(req, "gopi_media")
     delete(session.Values, "username")
     delete(session.Values, "user_id")
+    delete(session.Values, "loggedin")
+    session.Save(req, w)
     http.Redirect(w, req, "/login", 302)
 }
 
@@ -122,21 +156,25 @@ func Authenticate(username, password string) (*models.User, error) {
     }
 
     //unable to find user
-    h := sha512.New()
-    fmt.Fprint(h, password)
-    log.Println(h.Sum(nil))
-    log.Println(user.Password)
-    if string(h.Sum(nil)) == user.Password {
+    pwd := hashPwd(password)
+    if pwd == user.Password {
         return &user, nil
     } else {
         return nil, errors.New("bad password")
     }
 }
 
+func hashPwd(password string) string {
+    h := sha512.New()
+    fmt.Fprint(h, password)
+    return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 //globals
 var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
 var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
+const DEBUG int = 0
 
 func setupDatabase() {
     var err error
@@ -149,13 +187,27 @@ func setupDatabase() {
     dbmap.AddTableWithName(models.Media{}, "media").SetKeys(true, "Id")
 
     err = dbmap.CreateTablesIfNotExists()
+
     if err != nil { panic(err) }
+    users, err := dbmap.SelectInt("select count(*) from users")
+    if err != nil { panic(err) }
+    if users == 0 {
+        pwd := hashPwd("password")
+        _, err := models.NewUser(dbmap, "admin", pwd)
+        if err != nil {
+            fmt.Println("Problem with creating user")
+            panic(err)
+        }
+    }
+
+
     fmt.Println("Database up")
 }
 
 func init() {
     //setup database and templates
     setupDatabase()
+    templates_ago.LoadTemplates("templates/", templates)
 }
 
 func main() {
@@ -169,13 +221,16 @@ func main() {
     //router.HandleFunc("/media/new", HandleWrapper(NewMedia))
     //router.HandleFunc("/media/{id}", HandleWrapper(ShowMedia))
 
-    router.HandleFunc("/admin/", HandleWrapper(checkAuth(IndexAdmin)))
-    //router.HnadleFunc("/admin/users/", HandleWrapper(IndexAdminUsers))
+    router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
+    router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
+    router.HandleFunc("/admin/users/new", AuthWrapper(NewAdminUsers))
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
+    fmt.Println("routes set, about to handle")
     http.Handle("/", router)
-    http.ListenAndServe(":3000", nil)
+    err := http.ListenAndServe(":3000", nil)
+    if err != nil { panic(err) }
 }
 
 

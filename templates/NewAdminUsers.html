@@ -1,0 +1,11 @@
+{{ define "body" }}
+<h1>New user form</h1>
+<form method="POST" action="/admin/users/new">
+  <label for="username">Username</label>
+  <input type="text" name="username" id="username">
+  <label for="password">Password</label>
+  <input type="text" name="password" id="password">
+  <input type="submit" value="create user">
+</form>
+{{ end }}
+

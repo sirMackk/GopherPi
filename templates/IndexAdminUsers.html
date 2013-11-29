@@ -1,0 +1,8 @@
+{{ define "body" }}
+<h1>admin/users</h1>
+<ul>
+  {{ range . }}
+    <li>{{ .Id }} - {{ .Username }}</li>
+  {{ end }}
+</ul>
+{{ end }}
