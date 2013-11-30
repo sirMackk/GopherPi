@@ -9,18 +9,16 @@
   $(document).ready(function() {
     console.log("js ready")
     $("a.delete-user").on("click", function(e) {
-      console.log("clicked")
       e.preventDefault()
       e.stopPropagation()
       
       user_id = $(this).attr("href")
-      console.log("deleting in js")
-      console.log(user_id)
       $.ajax({
         url: "/admin/users/" + user_id,
         type: "DELETE",
         success: function() {
-          $(this).parents().find("li")[0].remove()
+          //delete right dom element
+          $(this).parent().remove();
         }
       });
     });

@@ -1,0 +1,13 @@
+{{ define "body" }}
+<h1>{{ .Title }}</h1>
+<p>{{ .Path }}</p>
+<embed
+  type="application/x-vlc-plugin"
+  pluginspage="http://ww.videolan.org"
+  version="VideoLan.VLCPlugin.2"
+  width="640"
+  height="480"
+  mrl="http://localhost:3000/{{ .Path }}"
+  target="http://localhost:3000/{{ .Path }}"
+  id="vlc">
+{{ end }}

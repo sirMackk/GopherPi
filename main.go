@@ -3,6 +3,9 @@ package main
 import (
     "./models"
     "fmt"
+    "os"
+    "io"
+    "strconv"
     "net/http"
     "log"
     "errors"
@@ -22,7 +25,7 @@ func logPanic(function HandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         if r := recover(); r != nil {
             //Log to file too
-            fmt.Fprint(w, fmt.Sprintf("Error: %s", r))
+            http.Error(w, fmt.Sprintf("%v", r), 500)
             log.Println(r)
         }
         function(w, req)
@@ -60,6 +63,7 @@ func AuthWrapper(function HandleFunc) HandleFunc {
 //Actual handling functions
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
+    //search fn here
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
@@ -68,21 +72,91 @@ func IndexMedia(w http.ResponseWriter, req *http.Request) {
     if err != nil { panic(err) }
 }
 
-//func NewMedia(w http.ResponseWriter, req *http.Request) {
-    //switch req.Method {
-    //case "GET":
-      //new_media := models.Media{}
-      //err := templates.Execute(w, new_media)
+func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
+    session, _ := store.Get(req, "gopi_media")
+    user_id := session.Values["user_id"]
+    var media []models.Media
+    _, err := dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", user_id)
+    if err != nil { panic(err) }
+    templates["indexmedia.html"].ExecuteTemplate(w, "base", media)
+}
+
+func NewMedia(w http.ResponseWriter, req *http.Request) {
+    switch req.Method {
+    case "GET":
+      templates.Execute(w, nil)
+    case "POST":
+      session, _ := store.Get(req, "gopi_media")
+      log.Println(session.Values)
+      //figure out the ram footprint of uploading really big files
+      // move this to own function
+      file, header, err := req.FormFile("file")
+      if err != nil { panic(err) }
+      f_path := fmt.Sprintf("users/%d/video/%s", session.Values["user_id"], header.Filename)
+      f, err := os.Create(f_path)
+      if err != nil { panic(err) }
+      _, err = io.Copy(f, file)
+      if err != nil { panic(err) }
+      f.Close()
+
+      title := req.FormValue("title")
+      private := false
+      m_type := "video"
+      uid, err := strconv.ParseUint(fmt.Sprintf("%d", session.Values["user_id"]), 10, 64)
+      media, err := models.NewMedia(dbmap, uid, title, m_type, f_path, private)
+      http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
+    }
+}
+
+      //reader, err := req.MultipartReader()
       //if err != nil { panic(err) }
-    //case "POST":
-      //title := req.FormValue("title")
-      //m_type := req.FormValue("type")
-      //private := req.FormValue("private")
-      //_, err := models.NewMedia(dbmap, uid, title, m_type, path, priv)
-      //if err != nil { panic(err) }
-      //http.Redirect(w, req, "/", 302)
-    //}
-//}
+      //defer req.Body.Close()
+    
+      //for {
+          //part, err := reader.NextPart()
+          //if err != nil {
+              //if err == io.EOF {
+                //break
+              //}
+              ////fileupload error handling here
+              //panic(err)
+          //}
+          //fmt.Println(part.FileName())
+          //part.Close()
+
+func ShowMedia(w http.ResponseWriter, req *http.Request) {
+    vars := mux.Vars(req)
+    //add delete here yo
+    session, _ := store.Get(req, "gopi_media")
+    var media models.Media
+    err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
+    if err != nil { panic(err) }
+    if media.Private == true {
+        if media.User_id == session.Values["user_id"] {
+            templates.Execute(w, media)
+        } else {
+            http.Error(w, "Verbotten", 403)
+        }
+    } else {
+        templates.Execute(w, media)
+    }
+}
+
+func EditMedia(w http.ResponseWriter, req *http.Request) {
+    session, _ := store.Get(req, "gopi_media")
+    vars := mux.Vars(req)
+
+    var user models.User
+    _, err := dbmap.Select(&user, "select * from users where Id = ?", session.Values["user_id"])
+    if err != nil { panic(err) }
+    var media models.Media
+    _, err = dbmap.Select(&media, "select * from media where Id = ?", vars["id"])
+    if user.Admin == true || user.Id == media.User_id {
+        templates["newmedia.html"].ExecuteTemplate(w, "base", media)
+    } else {
+        http.Error(w, "Verbotten!", 403)
+    }
+}
 
 //admin-funcs
 //users
@@ -109,6 +183,13 @@ func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
       pword := hashPwd(req.FormValue("password"))
       user, err := models.NewUser(dbmap, uname, pword)
       if err != nil { panic(err) }
+      //create user dir. tidy this up
+      err = os.Mkdir(fmt.Sprintf("users/%d/", user.Id), 0755)
+      if err != nil { panic(err) }
+      err = os.Mkdir(fmt.Sprintf("users/%d/video/", user.Id), 0755)
+      if err != nil { panic(err) }
+      err = os.Mkdir(fmt.Sprintf("users/%d/audio/", user.Id), 0755)
+      if err != nil { panic(err) }
       http.Redirect(w, req, fmt.Sprintf("/admin/users/%d", user.Id), 301)
     }
 }
@@ -131,6 +212,7 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
 }
 
 func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
+    //put put or post switch here
     vars := mux.Vars(req)
     id := vars["id"]
     var user models.User
@@ -236,6 +318,7 @@ func init() {
 }
 
 func main() {
+    defer dbmap.Db.Close()
     router := mux.NewRouter()
 
     //change wrappers
@@ -243,8 +326,10 @@ func main() {
     router.HandleFunc("/logout", logPanic(Logout))
 
     router.HandleFunc("/", HandleWrapper(IndexMedia))
-    //router.HandleFunc("/media/new", HandleWrapper(NewMedia))
-    //router.HandleFunc("/media/{id}", HandleWrapper(ShowMedia))
+    router.HandleFunc("/media", AuthWrapper(IndexOwnMedia))
+    router.HandleFunc("/media/new", AuthWrapper(NewMedia))
+    router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
+    router.HandleFunc("/media/{id}/edit", AuthWrapper(EditMedia))
 
     router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
     router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
@@ -254,6 +339,7 @@ func main() {
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
+    router.PathPrefix("/users/").Handler(http.StripPrefix("/users/", http.FileServer(http.Dir("users/"))))
     fmt.Println("routes set, about to handle")
     http.Handle("/", router)
     err := http.ListenAndServe(":3000", nil)

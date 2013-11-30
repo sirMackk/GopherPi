@@ -1,0 +1,10 @@
+{{ define "body" }}
+<h1>New Media</h1>
+  <form method="POST" action="new" enctype="multipart/form-data">
+    <input type="text" name="title">
+    <input type="checkbox" name="private">
+    <input type="file" name="file">
+    <input type="submit" value="new media">
+  </form>
+{{ end }}
+
