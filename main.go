@@ -3,13 +3,9 @@ package main
 import (
     "./models"
     "fmt"
-    "os"
-    "io"
-    "strconv"
     "net/http"
     "log"
     "errors"
-    "crypto/sha512"
     "github.com/gorilla/mux"
     "github.com/gorilla/sessions"
     "database/sql"
@@ -87,42 +83,11 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
       templates.Execute(w, nil)
     case "POST":
       session, _ := store.Get(req, "gopi_media")
-      log.Println(session.Values)
-      //figure out the ram footprint of uploading really big files
-      // move this to own function
-      file, header, err := req.FormFile("file")
-      if err != nil { panic(err) }
-      f_path := fmt.Sprintf("users/%d/video/%s", session.Values["user_id"], header.Filename)
-      f, err := os.Create(f_path)
-      if err != nil { panic(err) }
-      _, err = io.Copy(f, file)
-      if err != nil { panic(err) }
-      f.Close()
-
-      title := req.FormValue("title")
-      private := false
-      m_type := "video"
-      uid, err := strconv.ParseUint(fmt.Sprintf("%d", session.Values["user_id"]), 10, 64)
-      media, err := models.NewMedia(dbmap, uid, title, m_type, f_path, private)
+      media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%s", session.Values["user_id"]))
       http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
     }
 }
 
-      //reader, err := req.MultipartReader()
-      //if err != nil { panic(err) }
-      //defer req.Body.Close()
-    
-      //for {
-          //part, err := reader.NextPart()
-          //if err != nil {
-              //if err == io.EOF {
-                //break
-              //}
-              ////fileupload error handling here
-              //panic(err)
-          //}
-          //fmt.Println(part.FileName())
-          //part.Close()
 
 func ShowMedia(w http.ResponseWriter, req *http.Request) {
     vars := mux.Vars(req)
@@ -179,17 +144,7 @@ func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
       templates.Execute(w, nil)
     case "POST":
       //sum validations
-      uname := req.FormValue("username")
-      pword := hashPwd(req.FormValue("password"))
-      user, err := models.NewUser(dbmap, uname, pword)
-      if err != nil { panic(err) }
-      //create user dir. tidy this up
-      err = os.Mkdir(fmt.Sprintf("users/%d/", user.Id), 0755)
-      if err != nil { panic(err) }
-      err = os.Mkdir(fmt.Sprintf("users/%d/video/", user.Id), 0755)
-      if err != nil { panic(err) }
-      err = os.Mkdir(fmt.Sprintf("users/%d/audio/", user.Id), 0755)
-      if err != nil { panic(err) }
+      user := models.NewUserFromRequest(dbmap, req)
       http.Redirect(w, req, fmt.Sprintf("/admin/users/%d", user.Id), 301)
     }
 }
@@ -263,7 +218,7 @@ func Authenticate(username, password string) (*models.User, error) {
     }
 
     //unable to find user
-    pwd := hashPwd(password)
+    pwd := models.HashPwd(password)
     if pwd == user.Password {
         return &user, nil
     } else {
@@ -271,11 +226,6 @@ func Authenticate(username, password string) (*models.User, error) {
     }
 }
 
-func hashPwd(password string) string {
-    h := sha512.New()
-    fmt.Fprint(h, password)
-    return fmt.Sprintf("%x", h.Sum(nil))
-}
 
 //globals
 var dbmap *gorp.DbMap
@@ -299,7 +249,7 @@ func setupDatabase() {
     users, err := dbmap.SelectInt("select count(*) from users")
     if err != nil { panic(err) }
     if users == 0 {
-        pwd := hashPwd("password")
+        pwd := models.HashPwd("password")
         _, err := models.NewUser(dbmap, "admin", pwd)
         if err != nil {
             fmt.Println("Problem with creating user")
