@@ -2,7 +2,9 @@ package main
 
 import (
     "./models"
+    "./utils"
     "fmt"
+    "strconv"
     "net/http"
     "log"
     "errors"
@@ -91,19 +93,30 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
 
 func ShowMedia(w http.ResponseWriter, req *http.Request) {
     vars := mux.Vars(req)
-    //add delete here yo
     session, _ := store.Get(req, "gopi_media")
     var media models.Media
     err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
     if media.Private == true {
         if media.User_id == session.Values["user_id"] {
-            templates.Execute(w, media)
+            if req.Method == "DELETE" {
+                _, err := dbmap.Delete(&media)
+                if err != nil { panic(err) }
+                http.Redirect(w, req, "/media", 301)
+            } else {
+                templates.Execute(w, media)
+            }
         } else {
             http.Error(w, "Verbotten", 403)
         }
     } else {
+        if req.Method == "DELETE" {
+            _, err := dbmap.Delete(&media)
+            if err != nil { panic(err) }
+            http.Redirect(w, req, "/media", 301)
+        } else {
         templates.Execute(w, media)
+        }
     }
 }
 
@@ -116,19 +129,49 @@ func EditMedia(w http.ResponseWriter, req *http.Request) {
     if err != nil { panic(err) }
     var media models.Media
     _, err = dbmap.Select(&media, "select * from media where Id = ?", vars["id"])
-    if user.Admin == true || user.Id == media.User_id {
-        templates["newmedia.html"].ExecuteTemplate(w, "base", media)
-    } else {
-        http.Error(w, "Verbotten!", 403)
+    if err != nil { panic(err) }
+
+    switch req.Method {
+    case "GET":
+        if user.Admin == true || user.Id == media.User_id {
+            templates["newmedia.html"].ExecuteTemplate(w, "base", media)
+        } else {
+            http.Error(w, "Verbotten!", 403)
+        }
+    case "POST":
+        if user.Admin == true || user.Id == media.User_id {
+            req.ParseForm()
+            media.Title = req.Form["title"][0]
+            private, err := strconv.ParseBool(req.Form["private"][0])
+            media.Private = private
+            _, err = dbmap.Update(&media)
+            if err != nil { panic(err) }
+            http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 301)
+        } else {
+            http.Error(w, "Verbotten!", 403)
+        }
     }
 }
 
 //admin-funcs
 //users
 func IndexAdmin(w http.ResponseWriter, req *http.Request) {
-    //fmt.Fprint(w, "Admin Index")
-    templates.Execute(w, nil)
+    switch req.Method {
+    case "GET":
+        templates.Execute(w, nil)
+    case "POST":
+        req.ParseForm()
+        switch req.Form["action"][0] {
+            case "rescan":
+                utils.RescanMedia(dbmap)
+            case "changemediadir":
+                mediaDir = req.Form["directory"][0]
+
+        }
+    }
+
 }
+
 
 func IndexAdminUsers(w http.ResponseWriter, req *http.Request) {
     var users []models.User
@@ -231,7 +274,7 @@ func Authenticate(username, password string) (*models.User, error) {
 var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
 var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
-const DEBUG int = 0
+var mediaDir = "users/"
 
 func setupDatabase() {
     var err error
@@ -289,7 +332,7 @@ func main() {
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
-    router.PathPrefix("/users/").Handler(http.StripPrefix("/users/", http.FileServer(http.Dir("users/"))))
+    router.PathPrefix("/users/").Handler(http.StripPrefix("/users/", http.FileServer(http.Dir(mediaDir))))
     fmt.Println("routes set, about to handle")
     http.Handle("/", router)
     err := http.ListenAndServe(":3000", nil)

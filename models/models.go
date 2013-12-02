@@ -19,7 +19,7 @@ type User struct {
 
 type Media struct {
     Id, User_id uint64
-    Title, Type, Path string
+    Title, Type, Path, Fname string
     Private bool
 }
 
