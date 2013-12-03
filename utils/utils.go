@@ -10,36 +10,18 @@ import (
     "github.com/coopernurse/gorp"
 )
 
-type ProcFunc func(path string) error
+type FileMatchingFunc func(filename string) string
 
-func RescanMedia(dbmap *gorp.DbMap, processType string) {
+
+func RescanMedia(dbmap *gorp.DbMap) {
     vids := make(chan string, 100)
     dirs := make(chan string, 100)
 
     regex, _ := regexp.Compile("^\\.")
 
-    switch processType {
-      //type depends on func, add regexp file extension matchers,
-      //extract title, pass in user id. Maybe make this process both 
-      //audio and video at the same time?
-    case "video":
-        processFn := func(path string) error {
-            _, err := models.NewMedia(dbmap, uid, title, m_type, priv)
-            if err != nil { return err }
-            return nil
-        }
-    case "audio":
-        processFn := func(path string) error {
-            _, err := models.NewMedia(dbmap, uid, title, m_type, priv)
-            if err != nil { return err }
-            return nil
-        }
-    }
-
-
     go inspectDirectory(vids, dirs, regex)
     dirs <- "."
-    go processFiles(dbmap, vids, processFn)
+    go processFiles(dbmap, vids)
 
     time.Sleep(10 * 1e9)
 }
@@ -66,13 +48,42 @@ func buildPath(dir, file string) string {
     return fmt.Sprintf("%s/%s", dir, file)
 }
 
-func processFiles(dbmap *gorp.DbMap, vids chan string, proc ProcFunc) {
+func processFiles(dbmap *gorp.DbMap, vids chan string) {
     var path string
+    fileMatcher := determineFileType()
+    fileTitler := determineFileName()
     for {
         path = <- vids
-        err := proc(path)
-        //_, err := models.NewMedia(dbmap, uid, title, m_type, priv)
-        //if err != nil { log.Println(err) }
+        m_type := fileMatcher(path)
+        title := fileTitler(path)
+        _, err := models.NewMedia(dbmap, uid, title, m_type, priv)
+        if err != nil { log.Println(err) }
+    }
+}
+
+func determineFileType() FileMatchingFunc {
+    matchVideo, _ := regexp.Compile("\\.(avi|mp4|mkv|flv)$")
+    matchAudio, _ := regexp.Compile("\\.(mp3|ogg|aac|flac|m4a|wav|wma)")
+    return func(filename string) string {
+        if matchVideo.MatchString(filename) {
+            return "video"
+        } else if matchAudio.MatchString(filename) {
+            return "audio"
+        } else {
+            return "unknown"
+        }
+    }
+}
+
+func determineFileName() FileMatchingFunc {
+    extractName, _ := regexp.Compile("/[\\w]+\\.[avimp4kfl3ogcw]{2,4}$")
+    return func(filename string) string {
+        name := extractName.FindString(filename)
+        if len(name) == 0 {
+            return "unknown"
+        } else {
+            return name
+        }
     }
 }
 
