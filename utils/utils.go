@@ -13,7 +13,7 @@ import (
 type FileMatchingFunc func(filename string) string
 
 
-func RescanMedia(dbmap *gorp.DbMap) {
+func RescanMedia(dbmap *gorp.DbMap, uid uint64, priv bool) {
     vids := make(chan string, 100)
     dirs := make(chan string, 100)
 
@@ -21,7 +21,7 @@ func RescanMedia(dbmap *gorp.DbMap) {
 
     go inspectDirectory(vids, dirs, regex)
     dirs <- "."
-    go processFiles(dbmap, vids)
+    go processFiles(dbmap, vids, uid, priv)
 
     time.Sleep(10 * 1e9)
 }
@@ -48,7 +48,7 @@ func buildPath(dir, file string) string {
     return fmt.Sprintf("%s/%s", dir, file)
 }
 
-func processFiles(dbmap *gorp.DbMap, vids chan string) {
+func processFiles(dbmap *gorp.DbMap, vids chan string, uid uint64, priv bool) {
     var path string
     fileMatcher := determineFileType()
     fileTitler := determineFileName()
@@ -56,7 +56,7 @@ func processFiles(dbmap *gorp.DbMap, vids chan string) {
         path = <- vids
         m_type := fileMatcher(path)
         title := fileTitler(path)
-        _, err := models.NewMedia(dbmap, uid, title, m_type, priv)
+        _, err := models.NewMedia(dbmap, uid, title, m_type, path, priv)
         if err != nil { log.Println(err) }
     }
 }
@@ -76,7 +76,7 @@ func determineFileType() FileMatchingFunc {
 }
 
 func determineFileName() FileMatchingFunc {
-    extractName, _ := regexp.Compile("/[\\w]+\\.[avimp4kfl3ogcw]{2,4}$")
+    extractName, _ := regexp.Compile("/[\\S\\s]+\\.[avimp4kfl3ogcw]{2,4}$")
     return func(filename string) string {
         name := extractName.FindString(filename)
         if len(name) == 0 {
