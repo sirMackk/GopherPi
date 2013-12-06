@@ -40,15 +40,15 @@ func Test_determineFileType_4(t *testing.T) {
 
 func Test_determineFileName_1(t *testing.T) {
     fn := determineFileName()
-    if fn("folder/01 - (Fule of My Sould).mp3") != "01 - (Fule of My Sould)" {
+    if fn("folder/01 - (Fule of My Sould).mp3") != "01 - (Fule of My Sould).mp3" {
         t.Error("bad filename returned")
     }
-    t.Log(fn("01 - (Fuel Of My Soul).mp3"))
+    t.Log(fn("01 - (Fule of My Sould).mp3"))
 }
 
 func Test_determineFileName_2(t *testing.T) {
     fn := determineFileName()
-    if fn("/The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee.avi") != "The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee" {
+    if fn("/The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee.avi") != "The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee.avi" {
         t.Error("bad filename returned")
     }
     t.Log(fn("The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee.avi"))

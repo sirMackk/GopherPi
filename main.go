@@ -163,7 +163,9 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
         req.ParseForm()
         switch req.Form["action"][0] {
             case "rescan":
-                utils.RescanMedia(dbmap)
+                uid := req.FormValue("user_id")
+                priv_setting := req.FormValue("priv_setting")
+                utils.ScanMediaDir(dbmap, uid, priv_setting)
             case "changemediadir":
                 mediaDir = req.Form["directory"][0]
 
@@ -257,7 +259,7 @@ func Authenticate(username, password string) (*models.User, error) {
     var user models.User
     err := dbmap.SelectOne(&user, "select * from users where username = ?", username)
     if err != nil {
-        return nil, errors.New("invalid usernam")
+        return nil, errors.New("invalid username")
     }
 
     //unable to find user

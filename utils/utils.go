@@ -8,20 +8,27 @@ import (
     "regexp"
     "time"
     "github.com/coopernurse/gorp"
+    "strconv"
 )
 
 type FileMatchingFunc func(filename string) string
 
 
-func RescanMedia(dbmap *gorp.DbMap, uid uint64, priv bool) {
+func ScanMediaDir(dbmap *gorp.DbMap, uid, priv string) {
     vids := make(chan string, 100)
     dirs := make(chan string, 100)
+    user_id := toUi64(uid)
+    priv_setting, err := strconv.ParseBool(priv)
+    if err != nil {
+        priv_setting = true
+        log.Println("Error converting to boolean in utils ScanMediaDir")
+    }
 
     regex, _ := regexp.Compile("^\\.")
 
     go inspectDirectory(vids, dirs, regex)
     dirs <- "."
-    go processFiles(dbmap, vids, uid, priv)
+    go processFiles(dbmap, vids, user_id, priv_setting)
 
     time.Sleep(10 * 1e9)
 }
@@ -76,14 +83,23 @@ func determineFileType() FileMatchingFunc {
 }
 
 func determineFileName() FileMatchingFunc {
-    extractName, _ := regexp.Compile("/[\\S\\s]+\\.[avimp4kfl3ogcw]{2,4}$")
+    extractName, _ := regexp.Compile("[\\)\\(\\w\\s-\\.]+\\.[m4flcwogkvp3ai]{2,4}$")
     return func(filename string) string {
         name := extractName.FindString(filename)
         if len(name) == 0 {
-            return "unknown"
+              return "unknown"
         } else {
-            return name
+              return name
         }
     }
+}
+
+func toUi64(integer string) uint64 {
+    val, err := strconv.ParseUint(integer, 10, 64)
+    if err != nil {
+        log.Println("Error in toUi64")
+        return 0
+    }
+    return val
 }
 
