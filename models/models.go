@@ -19,7 +19,7 @@ type User struct {
 
 type Media struct {
     Id, User_id uint64
-    Title, Type, Path, Fname string
+    Title, Type, Path string
     Private bool
 }
 
@@ -45,9 +45,10 @@ func NewMedia(dbmap *gorp.DbMap, uid uint64, title, m_type, path string, priv bo
 }
 
 func NewMediaFromRequest(dbmap *gorp.DbMap, req *http.Request, user_id string) *Media {
+      log.Println(user_id)
       file, header, err := req.FormFile("file")
       if err != nil { panic(err) }
-      f_path := fmt.Sprintf("users/%d/video/%s", user_id, header.Filename)
+      f_path := fmt.Sprintf("users/%s/video/%s", user_id, header.Filename)
       f, err := os.Create(f_path)
       if err != nil { panic(err) }
       _, err = io.Copy(f, file)

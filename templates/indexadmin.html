@@ -1,3 +1,17 @@
 {{ define "body" }}
 <h1>Index admin</h1>
+<form method="POST" action="/admin">
+  <input type="hidden" value="scan" name="action">
+  <label for="user_id">User Id</label>
+  <input type="text" name="user_id" id="user_id">
+  <label for="directory">Directory</label>
+  <input type="text" name="directory" id="directory">
+  <label for="priv_setting">Privacy setting</label>
+  <input type="text" name="priv_setting" id="priv_setting">
+  <input type="submit" value="Scan location">
+</form>
+<form method="POST" action="/admin">
+  <input type="hidden" value="prune" name="action">
+  <input type="submit" value="Prune existing media">
+</form>
 {{ end }}

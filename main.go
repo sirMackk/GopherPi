@@ -85,7 +85,7 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
       templates.Execute(w, nil)
     case "POST":
       session, _ := store.Get(req, "gopi_media")
-      media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%s", session.Values["user_id"]))
+      media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%d", session.Values["user_id"]))
       http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
     }
 }
@@ -170,9 +170,9 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
                 directory := req.FormValue("directory")
                 priv_setting := req.FormValue("priv_setting")
                 utils.ScanMediaDir(dbmap, directory, uid, priv_setting)
-            case "changemediadir":
-                mediaDir = req.Form["directory"][0]
-
+            case "prune":
+                utils.PruneMedia(dbmap)
+            http.Redirect(w, req, "/", 301)
         }
     }
 

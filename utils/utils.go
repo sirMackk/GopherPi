@@ -3,11 +3,11 @@ package utils
 import (
     "io/ioutil"
     "../models"
+    "os"
     "fmt"
     "log"
     "sync"
     "regexp"
-    "time"
     "github.com/coopernurse/gorp"
     "strconv"
 )
@@ -38,8 +38,14 @@ func ScanMediaDir(dbmap *gorp.DbMap, directory, uid, priv string) {
 }
 
 func PruneMedia(dbmap *gorp.DbMap) error {
-
+    //used when using batch processing ie. over 10k records
+    //ids := countRecords(dbmap)
+    if err := simplePrune(dbmap); err != nil {
+        return err
+    } else {
+        return nil
     }
+}
 
 func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp, wg *sync.WaitGroup) {
     var currentDir string
@@ -63,7 +69,7 @@ func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp, wg *sync.WaitG
 }
 
 func buildPath(dir, file string) string {
-    return fmt.Sprintf("%s/%s", dir, file)
+    return fmt.Sprintf("%s%s", dir[1:], file)
 }
 
 func processFiles(dbmap *gorp.DbMap, vids chan string, uid uint64, priv bool) {
@@ -73,9 +79,11 @@ func processFiles(dbmap *gorp.DbMap, vids chan string, uid uint64, priv bool) {
     for {
         path = <- vids
         m_type := fileMatcher(path)
-        title := fileTitler(path)
-        _, err := models.NewMedia(dbmap, uid, title, m_type, path, priv)
-        if err != nil { log.Println(err) }
+        if m_type == "video" || m_type == "audio" {
+          title := fileTitler(path)
+          _, err := models.NewMedia(dbmap, uid, title, m_type, path, priv)
+          if err != nil { log.Println(err) }
+        }
     }
 }
 
@@ -114,3 +122,27 @@ func toUi64(integer string) uint64 {
     return val
 }
 
+func countRecords(dbmap *gorp.DbMap) []uint64 {
+    var ids []uint64
+    _, err := dbmap.Select(&ids, "select Id from media")
+    //take care of errs
+    if err != nil { panic(err) }
+    return ids
+}
+
+func simplePrune(dbmap *gorp.DbMap) error {
+    var media []models.Media
+    _, err := dbmap.Select(&media, "select * from media")
+    if err != nil { panic(err) }
+    for _, mediaItem := range media {
+        if _, err := os.Stat(mediaItem.Path); os.IsNotExist(err) {
+            //check error here
+            _, err := dbmap.Delete(&media)
+            if err != nil {
+                log.Println(err)
+                return err
+            }
+        }
+    }
+    return nil
+}
