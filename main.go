@@ -162,10 +162,14 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
     case "POST":
         req.ParseForm()
         switch req.Form["action"][0] {
-            case "rescan":
+            case "scan":
+                //user_id - which user will get the files
+                //directory - absolute path to media dir
+                //priv setting - should media be private or public?
                 uid := req.FormValue("user_id")
+                directory := req.FormValue("directory")
                 priv_setting := req.FormValue("priv_setting")
-                utils.ScanMediaDir(dbmap, uid, priv_setting)
+                utils.ScanMediaDir(dbmap, directory, uid, priv_setting)
             case "changemediadir":
                 mediaDir = req.Form["directory"][0]
 

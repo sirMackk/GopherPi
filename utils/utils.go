@@ -5,6 +5,7 @@ import (
     "../models"
     "fmt"
     "log"
+    "sync"
     "regexp"
     "time"
     "github.com/coopernurse/gorp"
@@ -14,9 +15,10 @@ import (
 type FileMatchingFunc func(filename string) string
 
 
-func ScanMediaDir(dbmap *gorp.DbMap, uid, priv string) {
+func ScanMediaDir(dbmap *gorp.DbMap, directory, uid, priv string) {
     vids := make(chan string, 100)
     dirs := make(chan string, 100)
+    wg := new(sync.WaitGroup)
     user_id := toUi64(uid)
     priv_setting, err := strconv.ParseBool(priv)
     if err != nil {
@@ -26,16 +28,24 @@ func ScanMediaDir(dbmap *gorp.DbMap, uid, priv string) {
 
     regex, _ := regexp.Compile("^\\.")
 
-    go inspectDirectory(vids, dirs, regex)
-    dirs <- "."
+    wg.Add(1)
+    go inspectDirectory(vids, dirs, regex, wg)
+    //dirs <- "."
+    dirs <- directory
     go processFiles(dbmap, vids, user_id, priv_setting)
-
-    time.Sleep(10 * 1e9)
+    wg.Wait()
+    //time.Sleep(10 * 1e9)
 }
 
-func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp) {
+func PruneMedia(dbmap *gorp.DbMap) error {
+
+    }
+
+func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp, wg *sync.WaitGroup) {
     var currentDir string
+    defer wg.Done()
     currentDir = <- dirs
+
     files, err := ioutil.ReadDir(currentDir)
     if err != nil { log.Println(err) }
     for _, file := range files {
@@ -43,7 +53,8 @@ func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp) {
         if !reg.MatchString(fileName) {
             if file.IsDir() {
                 dirs <- buildPath(currentDir, fileName)
-                go inspectDirectory(vids, dirs, reg)
+                wg.Add(1)
+                go inspectDirectory(vids, dirs, reg, wg)
             } else {
                 vids <- buildPath(currentDir, fileName)
             }
