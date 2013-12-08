@@ -69,7 +69,7 @@ func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp, wg *sync.WaitG
 }
 
 func buildPath(dir, file string) string {
-    return fmt.Sprintf("%s%s", dir[1:], file)
+    return fmt.Sprintf("%s%s", dir, file)
 }
 
 func processFiles(dbmap *gorp.DbMap, vids chan string, uid uint64, priv bool) {
@@ -137,7 +137,7 @@ func simplePrune(dbmap *gorp.DbMap) error {
     for _, mediaItem := range media {
         if _, err := os.Stat(mediaItem.Path); os.IsNotExist(err) {
             //check error here
-            _, err := dbmap.Delete(&media)
+            _, err := dbmap.Delete(&mediaItem)
             if err != nil {
                 log.Println(err)
                 return err

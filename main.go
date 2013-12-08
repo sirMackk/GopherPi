@@ -225,6 +225,20 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
     templates["newadminusers.html"].ExecuteTemplate(w, "base", user)
 }
 
+
+//media serving
+func ServeMedia(w http.ResponseWriter, req *http.Request) {
+    vars := mux.Vars(req)
+
+    obj, err := dbmap.Get(models.Media{}, vars["id"])
+    if err != nil { panic(err) }
+    if obj != nil {
+        http.ServeFile(w, req, obj.(*models.Media).Path)
+    } else {
+        http.Error(w, "File not found", 404)
+    }
+}
+
 //authentication
 func Login(w http.ResponseWriter, req *http.Request) {
     switch req.Method {
@@ -338,7 +352,7 @@ func main() {
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
-    router.PathPrefix("/users/").Handler(http.StripPrefix("/users/", http.FileServer(http.Dir(mediaDir))))
+    router.HandleFunc("/serve/{id}", logPanic(ServeMedia))
     fmt.Println("routes set, about to handle")
     http.Handle("/", router)
     err := http.ListenAndServe(":3000", nil)
