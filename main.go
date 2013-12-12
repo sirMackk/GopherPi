@@ -5,6 +5,7 @@ import (
     "./utils"
     "fmt"
     "strconv"
+    "os"
     "net/http"
     "log"
     "errors"
@@ -59,15 +60,28 @@ func AuthWrapper(function HandleFunc) HandleFunc {
 
 
 //Actual handling functions
+//static files
+func StaticHandler(w http.ResponseWriter, req *http.Request) {
+    muxVars := mux.Vars(req)
+    assetPath := fmt.Sprintf("%s%s", STATIC_PATH, muxVars["asset"])
+    if _, err := os.Stat(assetPath); os.IsNotExist(err) {
+        http.Error(w, "Not found", 404)
+    } else {
+        http.ServeFile(w, req, assetPath)
+    }
+}
+
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
+    log.Println(req.Header)
     //search fn here
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
 
-    err = templates.Execute(w, media)
-    if err != nil { panic(err) }
+    //err = templates.Execute(w, media)
+    http.ServeFile(w, req, "home.html")
+    //if err != nil { panic(err) }
 }
 
 func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
@@ -295,6 +309,7 @@ var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
 var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
 var mediaDir = "users/"
+const STATIC_PATH = "static/"
 
 func setupDatabase() {
     var err error
@@ -353,7 +368,9 @@ func main() {
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
     router.HandleFunc("/serve/{id}", logPanic(ServeMedia))
-    fmt.Println("routes set, about to handle")
+    router.HandleFunc("/static/{asset}", logPanic(StaticHandler))
+
+    log.Println("routes set, about to handle")
     http.Handle("/", router)
     err := http.ListenAndServe(":3000", nil)
     if err != nil { panic(err) }
