@@ -1,12 +1,9 @@
-{{ define "body" }}
-<h1>{{ .Title }}</h1>
-<p>{{ .Path }}</p>
+<h1>{{ Media.Title }}</h1>
 <embed
   type="application/x-vlc-plugin"
   pluginspage="http://ww.videolan.org"
   version="VideoLan.VLCPlugin.2"
   width="640"
   height="480"
-  target="http://localhost:3000/serve/{{ .Id }}"
+  embed-target="http://localhost:3000/serve/{{ Media.Id }}"
   id="vlc">
-{{ end }}

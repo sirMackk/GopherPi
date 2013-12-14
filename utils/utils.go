@@ -10,6 +10,7 @@ import (
     "regexp"
     "github.com/coopernurse/gorp"
     "strconv"
+    "strings"
 )
 
 type FileMatchingFunc func(filename string) string
@@ -146,3 +147,8 @@ func simplePrune(dbmap *gorp.DbMap) error {
     }
     return nil
 }
+
+func CheckIsJson(header string) bool {
+    return strings.Contains(header, "application/json")
+}
+
