@@ -9,6 +9,7 @@ import (
     "net/http"
     "log"
     "errors"
+    "encoding/json"
     "github.com/gorilla/mux"
     "github.com/gorilla/sessions"
     "database/sql"
@@ -71,17 +72,26 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
     }
 }
 
+//home
+func Home(w http.ResponseWriter, req *http.Request) {
+    http.ServeFile(w, req, "home.html")
+}
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
-    log.Println(req.Header)
     //search fn here
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
 
-    //err = templates.Execute(w, media)
-    http.ServeFile(w, req, "home.html")
-    //if err != nil { panic(err) }
+    //put this in utils
+    if utils.CheckIsJson(req.Header.Get("Accept")) {
+        jason := json.NewEncoder(w)
+        err = jason.Encode(media)
+        if err != nil { panic(err) }
+    } else {
+        err = templates.Execute(w, media)
+        if err != nil { panic(err) }
+    }
 }
 
 func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
@@ -118,7 +128,13 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
                 if err != nil { panic(err) }
                 http.Redirect(w, req, "/media", 301)
             } else {
+                if utils.CheckIsJson(req.Header.Get("Accept")) {
+                    jason := json.NewEncoder(w)
+                    err = jason.Encode(media)
+                    if err != nil { panic(err) }
+                } else {
                 templates.Execute(w, media)
+                }
             }
         } else {
             http.Error(w, "Verbotten", 403)
@@ -127,9 +143,17 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
         if req.Method == "DELETE" {
             _, err := dbmap.Delete(&media)
             if err != nil { panic(err) }
-            http.Redirect(w, req, "/media", 301)
+            if !utils.CheckIsJson(req.Header.Get("Accept")) {
+                http.Redirect(w, req, "/media", 301)
+            }
         } else {
-        templates.Execute(w, media)
+        if utils.CheckIsJson(req.Header.Get("Accept")) {
+            jason := json.NewEncoder(w)
+            err = jason.Encode(media)
+            if err != nil { panic(err) }
+        } else {
+            templates.Execute(w, media)
+        }
         }
     }
 }
@@ -186,7 +210,7 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
                 utils.ScanMediaDir(dbmap, directory, uid, priv_setting)
             case "prune":
                 utils.PruneMedia(dbmap)
-            http.Redirect(w, req, "/", 301)
+            http.Redirect(w, req, "/home", 301)
         }
     }
 
@@ -243,7 +267,6 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
 //media serving
 func ServeMedia(w http.ResponseWriter, req *http.Request) {
     vars := mux.Vars(req)
-
     obj, err := dbmap.Get(models.Media{}, vars["id"])
     if err != nil { panic(err) }
     if obj != nil {
@@ -270,7 +293,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
             err := session.Save(req, w)
             //better err handling here yo
             if err != nil { panic(err) }
-            http.Redirect(w, req, "/", 302)
+            http.Redirect(w, req, "/home", 302)
         } else {
             log.Println(err)
             http.Redirect(w, req, "/login", 403)
@@ -353,7 +376,8 @@ func main() {
     router.HandleFunc("/login", logPanic(Login))
     router.HandleFunc("/logout", logPanic(Logout))
 
-    router.HandleFunc("/", HandleWrapper(IndexMedia))
+    router.HandleFunc("/home", AuthWrapper(IndexMedia))
+    router.HandleFunc("/", HandleWrapper(Home))
     router.HandleFunc("/media", AuthWrapper(IndexOwnMedia))
     router.HandleFunc("/media/new", AuthWrapper(NewMedia))
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
@@ -368,7 +392,8 @@ func main() {
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
     router.HandleFunc("/serve/{id}", logPanic(ServeMedia))
-    router.HandleFunc("/static/{asset}", logPanic(StaticHandler))
+    //handle all assets below static too
+    router.HandleFunc("/static/{asset:[a-zA-Z0-9\\./-]+}", logPanic(StaticHandler))
 
     log.Println("routes set, about to handle")
     http.Handle("/", router)

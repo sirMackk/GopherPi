@@ -6,9 +6,15 @@ app.controller('HomeCtrl', ['$scope', 'Media', function(sc, Media) {
   });
 }]);
 
-app.controller('ShowMediaCtrl', ['$scope', 'Media', '$route', '$routeParams', function(sc, Media, rt, rtParams) {
-  var mediaId = rtParams.id;
-  Media.show(mediaId).success(function(data, status) {
+app.controller('ShowMediaCtrl', ['$scope', 'Media', '$location', '$route', '$routeParams', function(sc, Media, location, rt, rtParams) {
+  sc.mediaId = rtParams.id;
+  Media.show(sc.mediaId).success(function(data, status) {
     sc.Media = data
   });
+
+  sc.deleteMedia = function(id) {
+      Media.remove(id).success(function(data, status) {
+        location.path('/');
+      });
+  }
 }]);

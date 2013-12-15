@@ -1,4 +1,8 @@
 <h1>{{ Media.Title }}</h1>
+<div>
+  <a href="#" data-ng-click="deleteMedia(mediaId); $event.preventDefault();">Delete</a>
+</div>
+
 <embed
   type="application/x-vlc-plugin"
   pluginspage="http://ww.videolan.org"

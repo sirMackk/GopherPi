@@ -7,6 +7,9 @@ app.factory('Media', ['$http', function(http) {
     },
     show: function(id) {
       return http.get('/media/' + id)
+    },
+    remove: function(id) {
+      return http.delete('/media/' + id)
     }
   }
 }]);

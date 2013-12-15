@@ -70,7 +70,7 @@ func inspectDirectory(vids, dirs chan string, reg *regexp.Regexp, wg *sync.WaitG
 }
 
 func buildPath(dir, file string) string {
-    return fmt.Sprintf("%s%s", dir, file)
+    return fmt.Sprintf("%s/%s", dir, file)
 }
 
 func processFiles(dbmap *gorp.DbMap, vids chan string, uid uint64, priv bool) {
@@ -103,7 +103,7 @@ func determineFileType() FileMatchingFunc {
 }
 
 func determineFileName() FileMatchingFunc {
-    extractName, _ := regexp.Compile("[\\)\\(\\w\\s-\\.]+\\.[m4flcwogkvp3ai]{2,4}$")
+    extractName, _ := regexp.Compile("[\\{\\}\\]\\[\\)\\(\\w\\s-\\.]+\\.[m4flcwogkvp3ai]{2,4}$")
     return func(filename string) string {
         name := extractName.FindString(filename)
         if len(name) == 0 {
