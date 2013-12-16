@@ -1,7 +1,7 @@
 gopi_media (beta)
 =================
 
-A Golang1.1, AngularJS, Raspberry Pi and Firefox-VLC web plugin powered streaming media server. For those of us too convenient to set up a NAS or preposterously use physical devices to access their media across computers. 
+A Golang1.1, Raspberry Pi and Firefox-VLC web plugin powered streaming media server. For those of us too convenient to set up a NAS or preposterously use physical devices to access their media across computers. 
 
 Just plug in a hard drive to your RPi, add folder paths and bam, enjoy a web accessible and searchable list of your movies and music. Click on and it'll use the Firefox VLC web plugin to play that media.
 
@@ -14,20 +14,23 @@ I had a choice to make: play any media by having the RPi recode it into a web fr
 ### TODO list and possible improvements
 
 Things on my todo list now:
+
 1. Repair the routes, redirects and http errors.
 2. Buildout a better error handling package.
-3. Build a better way to discern between json and non-json requests (or use 3rd party package for that, but then where's the fun?)
-4. Expand the angular SPA to all areas of the site, including user media and admin panel.
+3. ~~Build a better way to discern between json and non-json requests (or use 3rd party package for that, but then where's the fun?)~~ (12/16/13 - decided against to reduce complexity)
+4. ~~Expand the angular SPA to all areas of the site, including user media and admin panel.~~ (12/16/13 - Same as above)
 5. Actually add valid and good looking markup instead of the current *hey, lemme see if it works* pile of. Yeah.
 6. Add video and audio controls like text/audio subtitle control.
 7. Actually get this working on the Raspberry Pi
 
 A little later:
-1. Add awesome support for audio files - editable playlists in angular would be awesome.
+
+1. Add awesome support for audio files - ~~editable playlists in angular would be awesome.~~ (12/16/13 - Do this in either angular or simple jquery)
 2. A way to categorize music albums in some way (tags, folders?)
 3. Add fetching of metadata ie. lyrics, imdb ratings/info, duration for music and video.
 
 Possible improvements:
+
 1. Add possibility to transcode video and allow for multiple versions of media to exist - this would allow to view media on any device that supports web video formats (great for watching videos on a tablet at home).
 
 ### Security Bonus

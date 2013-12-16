@@ -9,7 +9,6 @@ import (
     "net/http"
     "log"
     "errors"
-    "encoding/json"
     "github.com/gorilla/mux"
     "github.com/gorilla/sessions"
     "database/sql"
@@ -33,7 +32,6 @@ func logPanic(function HandleFunc) HandleFunc {
 }
 
 func setHeaders(function HandleFunc) HandleFunc {
-    //setup to handle json here? yeah...
     return func(w http.ResponseWriter, req *http.Request) {
         w.Header().Set("Content-Type", "text/html")
         function(w, req)
@@ -72,26 +70,14 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-//home
-func Home(w http.ResponseWriter, req *http.Request) {
-    http.ServeFile(w, req, "home.html")
-}
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
     //search fn here
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
-
-    //put this in utils
-    if utils.CheckIsJson(req.Header.Get("Accept")) {
-        jason := json.NewEncoder(w)
-        err = jason.Encode(media)
-        if err != nil { panic(err) }
-    } else {
-        err = templates.Execute(w, media)
-        if err != nil { panic(err) }
-    }
+    err = templates.Execute(w, media)
+    if err != nil { panic(err) }
 }
 
 func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
@@ -128,13 +114,7 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
                 if err != nil { panic(err) }
                 http.Redirect(w, req, "/media", 301)
             } else {
-                if utils.CheckIsJson(req.Header.Get("Accept")) {
-                    jason := json.NewEncoder(w)
-                    err = jason.Encode(media)
-                    if err != nil { panic(err) }
-                } else {
                 templates.Execute(w, media)
-                }
             }
         } else {
             http.Error(w, "Verbotten", 403)
@@ -143,17 +123,9 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
         if req.Method == "DELETE" {
             _, err := dbmap.Delete(&media)
             if err != nil { panic(err) }
-            if !utils.CheckIsJson(req.Header.Get("Accept")) {
-                http.Redirect(w, req, "/media", 301)
-            }
-        } else {
-        if utils.CheckIsJson(req.Header.Get("Accept")) {
-            jason := json.NewEncoder(w)
-            err = jason.Encode(media)
-            if err != nil { panic(err) }
+            http.Redirect(w, req, "/media", 301)
         } else {
             templates.Execute(w, media)
-        }
         }
     }
 }
@@ -328,11 +300,18 @@ func Authenticate(username, password string) (*models.User, error) {
 
 
 //globals
+var logFile *os.File
 var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
 var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
 var mediaDir = "users/"
 const STATIC_PATH = "static/"
+
+func setupLogging() {
+    logFile, err := os.Create("log.txt")
+    if err != nil { panic(err) }
+    log.SetOutput(logFile)
+}
 
 func setupDatabase() {
     var err error
@@ -357,27 +336,26 @@ func setupDatabase() {
             panic(err)
         }
     }
-
-
     fmt.Println("Database up")
 }
 
 func init() {
-    //setup database and templates
+    //setup database and templates and logging
+    setupLogging()
     setupDatabase()
     templates_ago.LoadTemplates("templates/", templates)
 }
 
 func main() {
     defer dbmap.Db.Close()
+    defer logFile.Close()
     router := mux.NewRouter()
 
     //change wrappers
     router.HandleFunc("/login", logPanic(Login))
     router.HandleFunc("/logout", logPanic(Logout))
 
-    router.HandleFunc("/home", AuthWrapper(IndexMedia))
-    router.HandleFunc("/", HandleWrapper(Home))
+    router.HandleFunc("/", AuthWrapper(IndexMedia))
     router.HandleFunc("/media", AuthWrapper(IndexOwnMedia))
     router.HandleFunc("/media/new", AuthWrapper(NewMedia))
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
