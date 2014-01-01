@@ -72,7 +72,6 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
 
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
-    //search fn here
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
@@ -355,7 +354,7 @@ func main() {
     router.HandleFunc("/login", logPanic(Login))
     router.HandleFunc("/logout", logPanic(Logout))
 
-    router.HandleFunc("/", AuthWrapper(IndexMedia))
+    router.HandleFunc("/", logPanic(IndexMedia))
     router.HandleFunc("/media", AuthWrapper(IndexOwnMedia))
     router.HandleFunc("/media/new", AuthWrapper(NewMedia))
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))

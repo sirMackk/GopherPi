@@ -15,13 +15,15 @@ I had a choice to make: play any media by having the RPi recode it into a web fr
 
 Things on my todo list now:
 
-1. Repair the routes, redirects and http errors.
+1. Repair the routes, redirects and http errors. Fix template hard coded routes.
 2. Buildout a better error handling package.
 3. ~~Build a better way to discern between json and non-json requests (or use 3rd party package for that, but then where's the fun?)~~ (12/16/13 - decided against to reduce complexity)
 4. ~~Expand the angular SPA to all areas of the site, including user media and admin panel.~~ (12/16/13 - Same as above)
 5. Actually add valid and good looking markup instead of the current *hey, lemme see if it works* pile of. Yeah.
-6. Add video and audio controls like text/audio subtitle control.
+6. Add video and audio controls like text/audio subtitle control. (1/1/14 - working on it)
 7. Actually get this working on the Raspberry Pi
+8. Add config file way of initializing the server
+9. Log user interactions ie. logins, adding of files
 
 A little later:
 

@@ -9,4 +9,18 @@
   height="480"
   target="http://localhost:3000/serve/{{ .Id }}"
   id="vlc">
+
+<div id="vlc-conrols">
+  <input type="button" onclick="time();" value="time" >
+</div>
+
+<div id="vlc-test"></div>
+
+<script type="text/javascript">
+  $(document).ready(function() {
+    var player = VLCobject.embedPlayer('vlc-test', 640, 480, true);
+
+    player.play('http://localhost:3000/serve/{{ .Id }}');
+  });
+</script>
 {{ end }}
