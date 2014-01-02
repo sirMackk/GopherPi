@@ -1,25 +1,11 @@
 {{ define "body" }}
 <h1>{{ .Title }}</h1>
 <p>{{ .Path }}</p>
-<embed
-  type="application/x-vlc-plugin"
-  pluginspage="http://ww.videolan.org"
-  version="VideoLan.VLCPlugin.2"
-  width="640"
-  height="480"
-  target="http://localhost:3000/serve/{{ .Id }}"
-  id="vlc">
-
-<div id="vlc-conrols">
-  <input type="button" onclick="time();" value="time" >
-</div>
-
-<div id="vlc-test"></div>
+<div id="vlc-media"></div>
 
 <script type="text/javascript">
   $(document).ready(function() {
-    var player = VLCobject.embedPlayer('vlc-test', 640, 480, true);
-
+    var player = VLCobject.embedPlayer('vlc-media', 640, 480, true);
     player.play('http://localhost:3000/serve/{{ .Id }}');
   });
 </script>
