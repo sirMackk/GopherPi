@@ -2,11 +2,14 @@
 <h1>{{ .Title }}</h1>
 <p>{{ .Path }}</p>
 <div id="vlc-media"></div>
+<div>
+  <a href="/serve/{{ .Id }}?download=true">Download file</a>
+</div>
 
 <script type="text/javascript">
   $(document).ready(function() {
     var player = VLCobject.embedPlayer('vlc-media', 640, 480, true);
-    player.play('http://localhost:3000/serve/{{ .Id }}');
+    player.play('/serve/{{ .Id }}');
   });
 </script>
 {{ end }}

@@ -23,7 +23,6 @@ type HandleFunc func(w http.ResponseWriter, req *http.Request)
 func logPanic(function HandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         if r := recover(); r != nil {
-            //Log to file too
             http.Error(w, fmt.Sprintf("%v", r), 500)
             log.Println(r)
         }
@@ -179,7 +178,9 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
                 directory := req.FormValue("directory")
                 priv_setting := req.FormValue("priv_setting")
                 utils.ScanMediaDir(dbmap, directory, uid, priv_setting)
+                log.Println(fmt.Sprintf("Scanning %s to add media to user id: %s", directory, uid))
             case "prune":
+                log.Println("Pruning existing media")
                 utils.PruneMedia(dbmap)
             http.Redirect(w, req, "/home", 301)
         }
@@ -220,7 +221,8 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
         fmt.Println("deleting")
         _, err := dbmap.Exec("delete from users where Id = ?", id)
         if err != nil { panic(err) }
-        //http.Redirect(w, req, "/admin/users", 301)
+        log.Println(fmt.Sprintf("Deleting user %s", id))
+        http.Redirect(w, req, "/admin/users", 301)
     }
 }
 
@@ -238,9 +240,16 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
 //media serving
 func ServeMedia(w http.ResponseWriter, req *http.Request) {
     vars := mux.Vars(req)
+    req.ParseForm()
+    isDownload := req.FormValue("download")
     obj, err := dbmap.Get(models.Media{}, vars["id"])
     if err != nil { panic(err) }
     if obj != nil {
+        if isDownload == "true" {
+          w.Header().Set("Content-Type", "application/octet-stream")
+          w.Header().Set("Content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", obj.(*models.Media).Title))
+        }
+        log.Println(fmt.Sprintf("Serving media id %s", vars["id"]))
         http.ServeFile(w, req, obj.(*models.Media).Path)
     } else {
         http.Error(w, "File not found", 404)
@@ -264,7 +273,8 @@ func Login(w http.ResponseWriter, req *http.Request) {
             err := session.Save(req, w)
             //better err handling here yo
             if err != nil { panic(err) }
-            http.Redirect(w, req, "/home", 302)
+            log.Println(fmt.Sprintf("User %d - %s logged in", user.Id, username))
+            http.Redirect(w, req, "/", 302)
         } else {
             log.Println(err)
             http.Redirect(w, req, "/login", 403)
@@ -274,10 +284,14 @@ func Login(w http.ResponseWriter, req *http.Request) {
 
 func Logout(w http.ResponseWriter, req *http.Request) {
     session, _ := store.Get(req, "gopi_media")
+    username := session.Values["username"]
+    user_id := session.Values["user_id"]
     delete(session.Values, "username")
     delete(session.Values, "user_id")
     delete(session.Values, "loggedin")
-    session.Save(req, w)
+    err := session.Save(req, w)
+    if err != nil { panic(err) }
+    log.Println(fmt.Sprintf("User %d - %s logged in", user_id, username))
     http.Redirect(w, req, "/login", 302)
 }
 
@@ -307,9 +321,11 @@ var mediaDir = "users/"
 const STATIC_PATH = "static/"
 
 func setupLogging() {
-    logFile, err := os.Create("log.txt")
+    //logFile, err := os.Create("log.txt")
+    logFile, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0600)
     if err != nil { panic(err) }
     log.SetOutput(logFile)
+    log.Println("Setting up loggin and initiating server")
 }
 
 func setupDatabase() {
@@ -335,7 +351,7 @@ func setupDatabase() {
             panic(err)
         }
     }
-    fmt.Println("Database up")
+    log.Println("Database up")
 }
 
 func init() {
