@@ -1,7 +1,17 @@
 {{ define "body" }}
-<form method="POST" action="/login">
-  <input type="text" name="username">
-  <input type="password" name="password">
-  <input type="submit" value="Log in">
-</form>
+<div class="row">
+  <div class="col-md-3">
+    <form method="POST" action="/login">
+      <fieldset>
+        <div class="form-group">
+          <input type="text" placeholder="Username" class="form-control" name="username">
+        </div>
+        <div class="form-group">
+          <input type="password" placeholder="Password" class="form-control" name="password">
+        </div>
+        <button type="submit" class="btn btn-success">Sign in</button>
+      </fieldset>
+    </form>
+  </div>
+</div>
 {{ end }}

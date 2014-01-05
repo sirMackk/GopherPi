@@ -84,7 +84,9 @@ func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", user_id)
     if err != nil { panic(err) }
-    templates["indexmedia.html"].ExecuteTemplate(w, "base", media)
+    err = templates.Execute(w, media)
+    if err != nil { panic(err) }
+    //templates["indexmedia.html"].ExecuteTemplate(w, "base", media)
 }
 
 func NewMedia(w http.ResponseWriter, req *http.Request) {
@@ -289,6 +291,7 @@ func Logout(w http.ResponseWriter, req *http.Request) {
     delete(session.Values, "username")
     delete(session.Values, "user_id")
     delete(session.Values, "loggedin")
+    session.Options = &sessions.Options{MaxAge: -1}
     err := session.Save(req, w)
     if err != nil { panic(err) }
     log.Println(fmt.Sprintf("User %d - %s logged in", user_id, username))
