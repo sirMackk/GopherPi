@@ -1,9 +1,0 @@
-{{ define "body" }}
-<h1>All Public Media</h1>
-<hr>
-<ol>
-  {{ range . }}
-    <li><a href="/media/{{ .Id }}">{{ .Title }}</a></li>
-  {{ end }}
-</ol>
-{{ end }}

@@ -1,4 +1,4 @@
-gopi_media (beta)
+GopherPi (beta)
 =================
 
 A Golang1.1, Raspberry Pi and Firefox-VLC web plugin powered streaming media server. For those of us too convenient to set up a NAS or preposterously use physical devices to access their media across computers. 

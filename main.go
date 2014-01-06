@@ -39,11 +39,11 @@ func setHeaders(function HandleFunc) HandleFunc {
 
 func checkAuth(function HandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
-        session, _ := store.Get(req, "gopi_media")
+        session, _ := store.Get(req, APP_NAME)
         if session.Values["loggedin"] == true {
             function(w, req)
         } else {
-            http.Redirect(w, req, "/login", 403) //302
+            http.Redirect(w, req, "/login", 302)
         }
     }
 }
@@ -79,7 +79,7 @@ func IndexMedia(w http.ResponseWriter, req *http.Request) {
 }
 
 func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "gopi_media")
+    session, _ := store.Get(req, APP_NAME)
     user_id := session.Values["user_id"]
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", user_id)
@@ -94,7 +94,7 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
     case "GET":
       templates.Execute(w, nil)
     case "POST":
-      session, _ := store.Get(req, "gopi_media")
+      session, _ := store.Get(req, APP_NAME)
       media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%d", session.Values["user_id"]))
       http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
     }
@@ -103,7 +103,7 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
 
 func ShowMedia(w http.ResponseWriter, req *http.Request) {
     vars := mux.Vars(req)
-    session, _ := store.Get(req, "gopi_media")
+    session, _ := store.Get(req, APP_NAME)
     var media models.Media
     err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
@@ -131,7 +131,7 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
 }
 
 func EditMedia(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "gopi_media")
+    session, _ := store.Get(req, "goper_pi")
     vars := mux.Vars(req)
 
     var user models.User
@@ -268,7 +268,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
         username := req.FormValue("username")
         password := req.FormValue("password")
         if user, err := Authenticate(username, password); err == nil {
-            session, _ := store.Get(req, "gopi_media")
+            session, _ := store.Get(req, APP_NAME)
             session.Values["username"] = username
             session.Values["user_id"] = user.Id
             session.Values["loggedin"] = true
@@ -285,7 +285,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "gopi_media")
+    session, _ := store.Get(req, APP_NAME)
     username := session.Values["username"]
     user_id := session.Values["user_id"]
     delete(session.Values, "username")
@@ -322,6 +322,7 @@ var templates = templates_ago.NewTemplates()
 var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
 var mediaDir = "users/"
 const STATIC_PATH = "static/"
+const APP_NAME = "gopher_pi"
 
 func setupLogging() {
     //logFile, err := os.Create("log.txt")
@@ -333,7 +334,7 @@ func setupLogging() {
 
 func setupDatabase() {
     var err error
-    db, err := sql.Open("sqlite3", "./gopi_media.db")
+    db, err := sql.Open("sqlite3", fmt.Sprintf("./%s.db", APP_NAME))
     if err != nil { panic(err) }
 
     dbmap = &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
