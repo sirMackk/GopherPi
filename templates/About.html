@@ -1,0 +1,17 @@
+{{ define "body" }}
+<div class="row">
+  <h1>About</h1>
+  <hr>
+  <div class="col-md-6">
+    About and readme
+  </div>
+</div>
+<script>
+  $(document).ready(function() {
+    navbarList = $('.navbar-nav').children();
+    navbarList.first().removeClass('active');
+    navbarList.eq(2).addClass('active');
+  });
+</script>
+{{ end }}
+

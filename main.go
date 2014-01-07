@@ -69,6 +69,13 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
     }
 }
 
+//about
+func About(w http.ResponseWriter, req *http.Request) {
+    templates["about.html"].ExecuteTemplate(w, "base", make(map[string]string))
+    //err := templates.Execute(w, make(map[string]string));
+    //if err != nil { panic(err) }
+}
+
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request) {
     var media []models.Media
@@ -387,6 +394,8 @@ func main() {
     router.HandleFunc("/admin/users/{id}/edit", AuthWrapper(EditAdminUsers))
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
+
+    router.HandleFunc("/about", logPanic(About))
 
     router.HandleFunc("/serve/{id}", logPanic(ServeMedia))
     //handle all assets below static too
