@@ -49,6 +49,27 @@
         </div><!--/.navbar-collapse -->
       </div>
     </div>
+    <div class="navbar navbar-default navbar-admin">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <p class="navbar-text">
+            Admin Nav
+          </p>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="/admin">Admin</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/media">Media</a></li>
+          </ul>
+        </div><!--/.navbar-collapse -->
+      </div>
+    </div>
 
     <div class="container">
       {{ template "body" . }}

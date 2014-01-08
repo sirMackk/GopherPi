@@ -377,7 +377,6 @@ func main() {
     defer logFile.Close()
     router := mux.NewRouter()
 
-    //change wrappers
     router.HandleFunc("/login", logPanic(Login))
     router.HandleFunc("/logout", logPanic(Logout))
 

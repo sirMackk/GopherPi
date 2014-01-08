@@ -1,10 +1,32 @@
 {{ define "body" }}
-<h1>admin/users</h1>
-<ul>
-  {{ range . }}
-  <li>{{ .Id }} - {{ .Username }} - [<a class="delete-user" href="{{ .Id }}">X</a>]</li>
-  {{ end }}
-</ul>
+<h1>Admin Users</h1>
+<hr>
+<div class="row">
+  <div class="col-md-8">
+    <table class="table-striped table-hover">
+      <thead>
+        <th>User Id</th>
+        <th>Username</th>
+        <th>Admin?</th>
+        <th>Action</th>
+      </thead>
+      <tbody>
+        {{ range . }}
+        <tr>
+          <td>{{ .Id }}</td>
+          <td>
+            <a href="/admin/users/{{ .Id }}">{{ .Username }}</a>
+          </td>
+          <td>{{ .Admin }}</td>
+          <td>
+            <a class="delete-user btn btn-danger btn-xs" href="{{ .Id }}">Delete</a>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
 <script>
   $(document).ready(function() {
     console.log("js ready")
@@ -23,5 +45,12 @@
       });
     });
   });
+
+  $(document).ready(function() {
+    var navbarList = $('.navbar-admin .navbar-nav').children();
+    navbarList.first().removeClass('active');
+    navbarList.eq(1).addClass('active');
+  });
+
 </script>
 {{ end }}
