@@ -23,8 +23,8 @@ type Media struct {
     Private bool
 }
 
-func NewUser(dbmap *gorp.DbMap, uname, pword string) (*User, error) {
-    new_user := &User{Username: uname, Password: pword, Admin: false}
+func NewUser(dbmap *gorp.DbMap, uname, pword string, admin bool) (*User, error) {
+    new_user := &User{Username: uname, Password: pword, Admin: admin}
     err := dbmap.Insert(new_user)
     if err != nil {
         log.Println("Error creating user")
@@ -67,7 +67,9 @@ func NewMediaFromRequest(dbmap *gorp.DbMap, req *http.Request, user_id string) *
 func NewUserFromRequest(dbmap *gorp.DbMap, req *http.Request) *User {
       uname := req.FormValue("username")
       pword := HashPwd(req.FormValue("password"))
-      user, err := NewUser(dbmap, uname, pword)
+      log.Println(req.FormValue("is-admin"))
+      admin := ParseCheckBox(req.FormValue("is-admin"))
+      user, err := NewUser(dbmap, uname, pword, admin)
       if err != nil { panic(err) }
       //create user dir. tidy this up
       err = os.Mkdir(fmt.Sprintf("users/%d/", user.Id), 0755)
@@ -83,4 +85,13 @@ func HashPwd(password string) string {
     h := sha512.New()
     fmt.Fprint(h, password)
     return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func ParseCheckBox(box string) bool {
+  switch box {
+  case "on":
+    return true
+  default:
+    return false
+  }
 }

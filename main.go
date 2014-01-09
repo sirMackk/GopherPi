@@ -242,7 +242,19 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
     var user models.User
     err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
     if err != nil { panic(err) }
-    templates["newadminusers.html"].ExecuteTemplate(w, "base", user)
+    switch req.Method {
+    case "GET":
+      templates["newadminusers.html"].ExecuteTemplate(w, "base", user)
+    case "POST":
+      log.Println(req.FormValue("is-admin"))
+      log.Println(models.ParseCheckBox(req.FormValue("is-admin")))
+      user.Username = req.FormValue("username")
+      user.Password = models.HashPwd(req.FormValue("password"))
+      user.Admin = models.ParseCheckBox(req.FormValue("is-admin"))
+      _, err := dbmap.Update(&user)
+      if err != nil { panic(err) }
+      http.Redirect(w, req, fmt.Sprintf("/admin/users/%s", id), 302)
+    }
 }
 
 
@@ -356,7 +368,7 @@ func setupDatabase() {
     if err != nil { panic(err) }
     if users == 0 {
         pwd := models.HashPwd("password")
-        _, err := models.NewUser(dbmap, "admin", pwd)
+        _, err := models.NewUser(dbmap, "admin", pwd, true)
         if err != nil {
             fmt.Println("Problem with creating user")
             panic(err)

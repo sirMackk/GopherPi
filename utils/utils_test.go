@@ -54,3 +54,12 @@ func Test_determineFileName_2(t *testing.T) {
     t.Log(fn("The.Maltese.Falcon.1941.512x368.25fps.922kbs.88mp3.MultiSub.WunSeeDee.avi"))
 }
 
+func Test_ParseBool_1(t *testing.T) {
+    val, err := ParseBool("0")
+    if val != false {
+      t.Error("ParseBool should return false")
+    } else if err != nil {
+      t.Error("ParseBool returns error")
+    }
+}
+

@@ -20,7 +20,7 @@ func ScanMediaDir(dbmap *gorp.DbMap, directory, uid, priv string) {
     dirs := make(chan string, 100)
     wg := new(sync.WaitGroup)
     user_id := toUi64(uid)
-    priv_setting, err := strconv.ParseBool(priv)
+    priv_setting, err := ParseBool(priv)
     if err != nil {
         priv_setting = true
         log.Println("Error converting to boolean in utils ScanMediaDir")
@@ -145,5 +145,11 @@ func simplePrune(dbmap *gorp.DbMap) error {
         }
     }
     return nil
+}
+
+func ParseBool(incoming string) (bool, error) {
+  value, err := strconv.ParseBool(incoming)
+  if err != nil { return value, err }
+  return value, nil
 }
 
