@@ -231,7 +231,7 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
         _, err := dbmap.Exec("delete from users where Id = ?", id)
         if err != nil { panic(err) }
         log.Println(fmt.Sprintf("Deleting user %s", id))
-        http.Redirect(w, req, "/admin/users", 301)
+        //http.Redirect(w, req, "/admin/users", 301)
     }
 }
 
