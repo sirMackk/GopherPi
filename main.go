@@ -141,15 +141,19 @@ func EditMedia(w http.ResponseWriter, req *http.Request) {
     session, _ := store.Get(req, "goper_pi")
     vars := mux.Vars(req)
 
+    log.Println(session.Values["user_id"])
+    log.Println(session.Values)
     var user models.User
-    _, err := dbmap.Select(&user, "select * from users where Id = ?", session.Values["user_id"])
+    err := dbmap.SelectOne(&user, "select * from users where Id = ?", session.Values["user_id"])
     if err != nil { panic(err) }
     var media models.Media
-    _, err = dbmap.Select(&media, "select * from media where Id = ?", vars["id"])
+    err = dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
 
     switch req.Method {
     case "GET":
+        log.Println(user)
+        log.Println(media)
         if user.Admin == true || user.Id == media.User_id {
             templates["newmedia.html"].ExecuteTemplate(w, "base", media)
         } else {
@@ -225,13 +229,23 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
       var user models.User
       err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
       if err != nil { panic(err) }
-      templates.Execute(w, user)
+      var media []models.Media
+      _, err = dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", id)
+      if err != nil { panic(err) }
+      stats := map[string]int{
+        "TotalMedia": len(media),
+      }
+      templateData := map[string]interface{}{
+        "User": user,
+        "Media": media,
+        "Stats": stats,
+      }
+      templates.Execute(w, templateData)
     case "DELETE":
         fmt.Println("deleting")
         _, err := dbmap.Exec("delete from users where Id = ?", id)
         if err != nil { panic(err) }
         log.Println(fmt.Sprintf("Deleting user %s", id))
-        //http.Redirect(w, req, "/admin/users", 301)
     }
 }
 

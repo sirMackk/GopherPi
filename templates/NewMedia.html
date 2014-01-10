@@ -1,10 +1,34 @@
 {{ define "body" }}
+<div class="row">
+{{ if .Id }}
+<h1>Edit media "{{ .Title }}"</h1>
+{{ else }}
 <h1>New Media</h1>
-  <form method="POST" action="new" enctype="multipart/form-data">
-    <input type="text" name="title">
-    <input type="checkbox" name="private">
-    <input type="file" name="file">
-    <input type="submit" value="new media">
+{{ end }}
+<hr>
+  <form method="POST" action="new" enctype="multipart/form-data" class="form-horizontal">
+    <fieldset>
+      <div class="form-group">
+        <label for="title" class="col-sm-3">Title</label>
+        <div class="col-sm-5">
+          <input type="text" name="title" id="title" class="form-control" {{ if .Title }} value="{{ .Title }}" {{ end }}>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-3" for="file">Upload</label>
+        <div class="col-sm-5">
+          <input type="file" name="file">
+        </div>
+      </div>
+      <div class="form-group checkbox">
+        <label for="private" class="col-sm-3">Private</label>
+        <div class="col-sm-5">
+          <input type="checkbox" name="private" id="private" {{ if .Private }} checked="checked" {{ end }}>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-success">Save</button>
+    </fieldset>
   </form>
+</div>
 {{ end }}
 

@@ -1,8 +1,12 @@
 {{ define "body" }}
-<h1>User {{ .Username }}</h1>
+<h1>User {{ .User.Username }}</h1>
 <h4>
 <div class="row">
-    <a href="/admin/users/{{ .Id }}/edit" class="btn btn-primary">Edit</a>
-    <p>Some stats over here, media files</p>
+  <a href="/admin/users/{{ .Id }}/edit" class="btn btn-primary btn-sm">Edit</a>
 </div>
+<div class="row">
+  <hr>
+  Total media: {{ .Stats.TotalMedia }}
+</div>
+
 {{ end }}
