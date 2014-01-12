@@ -63,12 +63,26 @@ func checkAuth(function AuthHandleFunc) AuthHandleFunc {
     }
 }
 
+func checkAdminAuth(function AuthHandleFunc) AuthHandleFunc {
+    return func(w http.ResponseWriter, req *http.Request, c Context) {
+        if c["User"].(*models.User).Admin {
+            function(w, req, c)
+        } else {
+            http.Redirect(w, req, "/", 302)
+        }
+    }
+}
+
 func HandleWrapper(function AuthHandleFunc) HandleFunc {
     return logPanic(setHeaders(setContext(function)))
 }
 
 func AuthWrapper(function AuthHandleFunc) HandleFunc {
     return logPanic(setHeaders(setContext(checkAuth(function))))
+}
+
+func AdminAuthWrapper(function AuthHandleFunc) HandleFunc {
+    return  AuthWrapper(checkAdminAuth(function))
 }
 
 
@@ -419,11 +433,16 @@ func main() {
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
     router.HandleFunc("/media/{id}/edit", AuthWrapper(EditMedia))
 
-    router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
-    router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
-    router.HandleFunc("/admin/users/new", AuthWrapper(NewAdminUsers))
-    router.HandleFunc("/admin/users/{id}", AuthWrapper(ShowAdminUsers))
-    router.HandleFunc("/admin/users/{id}/edit", AuthWrapper(EditAdminUsers))
+    //router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
+    //router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
+    //router.HandleFunc("/admin/users/new", AuthWrapper(NewAdminUsers))
+    //router.HandleFunc("/admin/users/{id}", AuthWrapper(ShowAdminUsers))
+    //router.HandleFunc("/admin/users/{id}/edit", AuthWrapper(EditAdminUsers))
+    router.HandleFunc("/admin", AdminAuthWrapper(IndexAdmin))
+    router.HandleFunc("/admin/users", AdminAuthWrapper(IndexAdminUsers))
+    router.HandleFunc("/admin/users/new", AdminAuthWrapper(NewAdminUsers))
+    router.HandleFunc("/admin/users/{id}", AdminAuthWrapper(ShowAdminUsers))
+    router.HandleFunc("/admin/users/{id}/edit", AdminAuthWrapper(EditAdminUsers))
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
