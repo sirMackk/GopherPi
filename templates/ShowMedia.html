@@ -1,20 +1,21 @@
 {{ define "body" }}
-<h1>{{ .Title }}</h1>
+<h1>{{ .Media.Title }}</h1>
 <hr>
-<a href="/media/{{ .Id }}/edit" class="btn btn-primary btn-sm">Edit</a>
+<a href="/media/{{ .Media.Id }}/edit" class="btn btn-primary btn-sm">Edit</a>
+<hr>
 <div class="row">
   <div id="vlc-media"></div>
 </div>
 <div class="row">
   <div>
-    <a href="/serve/{{ .Id }}?download=true">Download file</a>
+    <a href="/serve/{{ .Media.Id }}?download=true">Download file</a>
   </div>
 </div>
 
 <script type="text/javascript">
   $(document).ready(function() {
     var player = VLCobject.embedPlayer('vlc-media', 640, 480, true);
-    player.play('/serve/{{ .Id }}');
+    player.play('/serve/{{ .Media.Id }}');
   });
 </script>
 {{ end }}

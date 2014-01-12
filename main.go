@@ -19,6 +19,8 @@ import (
 
 //HandleFunc wrappers and settings
 type HandleFunc func(w http.ResponseWriter, req *http.Request)
+type AuthHandleFunc func(w http.ResponseWriter, req *http.Request, c Context)
+type Context map[string]interface{}
 
 func logPanic(function HandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
@@ -37,23 +39,36 @@ func setHeaders(function HandleFunc) HandleFunc {
     }
 }
 
-func checkAuth(function HandleFunc) HandleFunc {
+func setContext(function AuthHandleFunc) HandleFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         session, _ := store.Get(req, APP_NAME)
+        context := make(Context)
         if session.Values["loggedin"] == true {
-            function(w, req)
+            var user models.User
+            err := dbmap.SelectOne(&user, "select * from users where Id = ?", session.Values["user_id"])
+            context["User"] = &user
+            if err != nil { panic(err) }
+        }
+        function(w, req, context)
+    }
+}
+
+func checkAuth(function AuthHandleFunc) AuthHandleFunc {
+    return func(w http.ResponseWriter, req *http.Request, c Context) {
+        if _, ok := c["User"]; ok {
+            function(w, req, c)
         } else {
             http.Redirect(w, req, "/login", 302)
         }
     }
 }
 
-func HandleWrapper(function HandleFunc) HandleFunc {
-    return logPanic(setHeaders(function))
+func HandleWrapper(function AuthHandleFunc) HandleFunc {
+    return logPanic(setHeaders(setContext(function)))
 }
 
-func AuthWrapper(function HandleFunc) HandleFunc {
-    return logPanic(checkAuth(setHeaders(function)))
+func AuthWrapper(function AuthHandleFunc) HandleFunc {
+    return logPanic(setHeaders(setContext(checkAuth(function))))
 }
 
 
@@ -70,33 +85,34 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 //about
-func About(w http.ResponseWriter, req *http.Request) {
-    templates["about.html"].ExecuteTemplate(w, "base", make(map[string]string))
+func About(w http.ResponseWriter, req *http.Request, c Context) {
+    templates["about.html"].ExecuteTemplate(w, "base", c)
     //err := templates.Execute(w, make(map[string]string));
     //if err != nil { panic(err) }
 }
 
 //media and ordinary users
-func IndexMedia(w http.ResponseWriter, req *http.Request) {
+func IndexMedia(w http.ResponseWriter, req *http.Request, c Context) {
+    log.Println(c["User"])
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
-    err = templates.Execute(w, media)
+    c["Media"] = media
+    err = templates.Execute(w, c)
     if err != nil { panic(err) }
 }
 
-func IndexOwnMedia(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, APP_NAME)
-    user_id := session.Values["user_id"]
+func IndexOwnMedia(w http.ResponseWriter, req *http.Request, c Context) {
+    user_id := c["User"].(*models.User).Id
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", user_id)
+    c["Media"] = &media
     if err != nil { panic(err) }
-    err = templates.Execute(w, media)
+    err = templates.Execute(w, c)
     if err != nil { panic(err) }
-    //templates["indexmedia.html"].ExecuteTemplate(w, "base", media)
 }
 
-func NewMedia(w http.ResponseWriter, req *http.Request) {
+func NewMedia(w http.ResponseWriter, req *http.Request, c Context) {
     switch req.Method {
     case "GET":
       templates.Execute(w, nil)
@@ -108,20 +124,20 @@ func NewMedia(w http.ResponseWriter, req *http.Request) {
 }
 
 
-func ShowMedia(w http.ResponseWriter, req *http.Request) {
+func ShowMedia(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
-    session, _ := store.Get(req, APP_NAME)
     var media models.Media
     err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
+    c["Media"] = media
     if media.Private == true {
-        if media.User_id == session.Values["user_id"] {
+        if media.User_id == c["User"].(*models.User).Id {
             if req.Method == "DELETE" {
                 _, err := dbmap.Delete(&media)
                 if err != nil { panic(err) }
                 http.Redirect(w, req, "/media", 301)
             } else {
-                templates.Execute(w, media)
+                templates.Execute(w, c)
             }
         } else {
             http.Error(w, "Verbotten", 403)
@@ -132,26 +148,24 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
             if err != nil { panic(err) }
             http.Redirect(w, req, "/media", 301)
         } else {
-            templates.Execute(w, media)
+            templates.Execute(w, c)
         }
     }
 }
 
-func EditMedia(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "gopher_pi")
+func EditMedia(w http.ResponseWriter, req *http.Request, c Context) {
+    user := c["User"].(*models.User)
     vars := mux.Vars(req)
 
-    var user models.User
-    err := dbmap.SelectOne(&user, "select * from users where Id = ?", session.Values["user_id"])
-    if err != nil { panic(err) }
     var media models.Media
-    err = dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
+    err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
+    c["Media"] = media
 
     switch req.Method {
     case "GET":
         if user.Admin == true || user.Id == media.User_id {
-            templates["newmedia.html"].ExecuteTemplate(w, "base", media)
+            templates["newmedia.html"].ExecuteTemplate(w, "base", c)
         } else {
             http.Error(w, "Verbotten!", 403)
         }
@@ -172,10 +186,10 @@ func EditMedia(w http.ResponseWriter, req *http.Request) {
 
 //admin-funcs
 //users
-func IndexAdmin(w http.ResponseWriter, req *http.Request) {
+func IndexAdmin(w http.ResponseWriter, req *http.Request, c Context) {
     switch req.Method {
     case "GET":
-        templates.Execute(w, nil)
+        templates.Execute(w, c)
     case "POST":
         req.ParseForm()
         switch req.Form["action"][0] {
@@ -198,18 +212,19 @@ func IndexAdmin(w http.ResponseWriter, req *http.Request) {
 }
 
 
-func IndexAdminUsers(w http.ResponseWriter, req *http.Request) {
+func IndexAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     var users []models.User
     _, err := dbmap.Select(&users, "select * from users order by Id")
     if err != nil { panic(err) }
-    err = templates.Execute(w, users)
+    c["Users"] = users
+    err = templates.Execute(w, c)
     if err != nil { panic(err) }
 }
 
-func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
+func NewAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     switch req.Method {
     case "GET":
-      templates.Execute(w, nil)
+      templates.Execute(w, c)
     case "POST":
       //sum validations
       user := models.NewUserFromRequest(dbmap, req)
@@ -217,7 +232,7 @@ func NewAdminUsers(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
+func ShowAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
     id := vars["id"]
     switch req.Method {
@@ -225,18 +240,16 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
       var user models.User
       err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
       if err != nil { panic(err) }
+      c["ShowUser"] = user
       var media []models.Media
       _, err = dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", id)
       if err != nil { panic(err) }
+      c["Media"] = media
       stats := map[string]int{
         "TotalMedia": len(media),
       }
-      templateData := map[string]interface{}{
-        "User": user,
-        "Media": media,
-        "Stats": stats,
-      }
-      templates.Execute(w, templateData)
+      c["Stats"] = stats
+      templates.Execute(w, c)
     case "DELETE":
         fmt.Println("deleting")
         _, err := dbmap.Exec("delete from users where Id = ?", id)
@@ -245,19 +258,17 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-func EditAdminUsers(w http.ResponseWriter, req *http.Request) {
-    //put put or post switch here
+func EditAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
     id := vars["id"]
     var user models.User
     err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
     if err != nil { panic(err) }
+    c["Edit"] = user
     switch req.Method {
     case "GET":
-      templates["newadminusers.html"].ExecuteTemplate(w, "base", user)
+      templates["newadminusers.html"].ExecuteTemplate(w, "base", c)
     case "POST":
-      log.Println(req.FormValue("is-admin"))
-      log.Println(models.ParseCheckBox(req.FormValue("is-admin")))
       user.Username = req.FormValue("username")
       user.Password = models.HashPwd(req.FormValue("password"))
       user.Admin = models.ParseCheckBox(req.FormValue("is-admin"))
@@ -402,7 +413,7 @@ func main() {
     router.HandleFunc("/login", logPanic(Login))
     router.HandleFunc("/logout", logPanic(Logout))
 
-    router.HandleFunc("/", logPanic(IndexMedia))
+    router.HandleFunc("/", AuthWrapper(IndexMedia))
     router.HandleFunc("/media", AuthWrapper(IndexOwnMedia))
     router.HandleFunc("/media/new", AuthWrapper(NewMedia))
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
@@ -416,7 +427,7 @@ func main() {
     //router.HandleFunc("/admin/media/", HandleWrapper(IndexAdminMedia))
     //router.HandleFunc("/admin/media/new", HandleWrapper(NewAdminMedia))
 
-    router.HandleFunc("/about", logPanic(About))
+    router.HandleFunc("/about", HandleWrapper(About))
 
     router.HandleFunc("/serve/{id}", logPanic(ServeMedia))
     //handle all assets below static too

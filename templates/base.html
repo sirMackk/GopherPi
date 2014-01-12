@@ -46,9 +46,19 @@
             <li><a href="/media">Mine</a></li>
             <li><a href="/about">About</a></li>
           </ul>
+          <p class="navbar-text navbar-right">
+            {{ if .User }}
+            <i class="fa fa-lock"></i>
+            <a href="/logout" class="navbar-link">Log out</a>
+            {{ else }}
+            <i class="fa fa-power-off"></i>
+            <a href="/login" class="navbar-link">Log in</a>
+            {{ end }}
+          </p>
         </div><!--/.navbar-collapse -->
       </div>
     </div>
+    {{ if .User.Admin }}
     <div class="navbar navbar-default navbar-admin">
       <div class="container">
         <div class="navbar-header">
@@ -70,6 +80,7 @@
         </div><!--/.navbar-collapse -->
       </div>
     </div>
+    {{ end }}
 
     <div class="container">
       {{ template "body" . }}

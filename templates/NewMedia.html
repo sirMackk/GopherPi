@@ -1,7 +1,7 @@
 {{ define "body" }}
 <div class="row">
-{{ if .Id }}
-<h1>Edit media "{{ .Title }}"</h1>
+{{ if .Media.Id }}
+<h1>Edit media "{{ .Media.Title }}"</h1>
 {{ else }}
 <h1>New Media</h1>
 {{ end }}
@@ -11,7 +11,7 @@
       <div class="form-group">
         <label for="title" class="col-sm-3">Title</label>
         <div class="col-sm-5">
-          <input type="text" name="title" id="title" class="form-control" {{ if .Title }} value="{{ .Title }}" {{ end }}>
+          <input type="text" name="title" id="title" class="form-control" {{ if .Media.Title }} value="{{ .Media.Title }}" {{ end }}>
         </div>
       </div>
       <div class="form-group">
@@ -23,7 +23,7 @@
       <div class="form-group checkbox">
         <label for="private" class="col-sm-3">Private</label>
         <div class="col-sm-5">
-          <input type="checkbox" name="private" id="private" {{ if .Private }} checked="checked" {{ end }}>
+          <input type="checkbox" name="private" id="private" {{ if .Media.Private }} checked="checked" {{ end }}>
         </div>
       </div>
       <button type="submit" class="btn btn-success">Save</button>

@@ -9,7 +9,7 @@
   <div class="tab-content">
     <div class="tab-pane active" id="media">
       <ol>
-        {{ range . }}
+        {{ range .Media }}
           <li><a href="/media/{{ .Id }}">{{ .Title }}</a></li>
         {{ end }}
       </ol>

@@ -4,7 +4,7 @@
 <div class="row">
   <div class="col-md-6">
     <ol>
-      {{ range . }}
+      {{ range .Media }}
         <li><a href="/media/{{ .Id }}">{{ .Title }}</a></li>
       {{ end }}
     </ol>
