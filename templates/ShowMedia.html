@@ -1,9 +1,14 @@
 {{ define "body" }}
 <h1>{{ .Title }}</h1>
-<p>{{ .Path }}</p>
-<div id="vlc-media"></div>
-<div>
-  <a href="/serve/{{ .Id }}?download=true">Download file</a>
+<hr>
+<a href="/media/{{ .Id }}/edit" class="btn btn-primary btn-sm">Edit</a>
+<div class="row">
+  <div id="vlc-media"></div>
+</div>
+<div class="row">
+  <div>
+    <a href="/serve/{{ .Id }}?download=true">Download file</a>
+  </div>
 </div>
 
 <script type="text/javascript">

@@ -138,11 +138,9 @@ func ShowMedia(w http.ResponseWriter, req *http.Request) {
 }
 
 func EditMedia(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "goper_pi")
+    session, _ := store.Get(req, "gopher_pi")
     vars := mux.Vars(req)
 
-    log.Println(session.Values["user_id"])
-    log.Println(session.Values)
     var user models.User
     err := dbmap.SelectOne(&user, "select * from users where Id = ?", session.Values["user_id"])
     if err != nil { panic(err) }
@@ -152,8 +150,6 @@ func EditMedia(w http.ResponseWriter, req *http.Request) {
 
     switch req.Method {
     case "GET":
-        log.Println(user)
-        log.Println(media)
         if user.Admin == true || user.Id == media.User_id {
             templates["newmedia.html"].ExecuteTemplate(w, "base", media)
         } else {
