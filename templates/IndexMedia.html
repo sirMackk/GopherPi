@@ -3,11 +3,20 @@
 <hr>
 <div class="row">
   <div class="col-md-6">
-    <ol>
-      {{ range .Media }}
-        <li><a href="/media/{{ .Id }}">{{ .Title }}</a></li>
-      {{ end }}
-    </ol>
+    <table class="table table-striped table-hover">
+      <thead>
+        <th>No.</th>
+        <th>Title</th>
+      </thead>
+      <tbody>
+        {{ range .Media }}
+        <tr>
+          <td>{{ .Id }}</td>
+          <td><a href="/media/{{ .Id }}">{{ .Title }}</a></td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
   </div>
 </div>
 {{ end }}

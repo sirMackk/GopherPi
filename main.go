@@ -160,7 +160,7 @@ func ShowMedia(w http.ResponseWriter, req *http.Request, c Context) {
         if req.Method == "DELETE" {
             _, err := dbmap.Delete(&media)
             if err != nil { panic(err) }
-            http.Redirect(w, req, "/media", 301)
+            log.Println(fmt.Sprintf("Deleting media %d - %s", media.Id, media.Title))
         } else {
             templates.Execute(w, c)
         }
@@ -433,11 +433,6 @@ func main() {
     router.HandleFunc("/media/{id}", AuthWrapper(ShowMedia))
     router.HandleFunc("/media/{id}/edit", AuthWrapper(EditMedia))
 
-    //router.HandleFunc("/admin", AuthWrapper(IndexAdmin))
-    //router.HandleFunc("/admin/users", AuthWrapper(IndexAdminUsers))
-    //router.HandleFunc("/admin/users/new", AuthWrapper(NewAdminUsers))
-    //router.HandleFunc("/admin/users/{id}", AuthWrapper(ShowAdminUsers))
-    //router.HandleFunc("/admin/users/{id}/edit", AuthWrapper(EditAdminUsers))
     router.HandleFunc("/admin", AdminAuthWrapper(IndexAdmin))
     router.HandleFunc("/admin/users", AdminAuthWrapper(IndexAdminUsers))
     router.HandleFunc("/admin/users/new", AdminAuthWrapper(NewAdminUsers))

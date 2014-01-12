@@ -8,11 +8,31 @@
   </ul>
   <div class="tab-content">
     <div class="tab-pane active" id="media">
-      <ol>
-        {{ range .Media }}
-          <li><a href="/media/{{ .Id }}">{{ .Title }}</a></li>
-        {{ end }}
-      </ol>
+      <table class="table table-striped table-hover">
+        <thead>
+          <th>Id</th>
+          <th>Title</th>
+          <th>Private?</th>
+          <th>Actiom?</th>
+        </thead>
+        <tbody>
+          {{ range .Media }}
+          <tr>
+            <td>{{ .Id }}</td>
+            <td><a href="/media/{{ .Id }}">{{ .Title }}</a></td>
+            <td>{{ if .Private }} Yes {{ else }} No {{ end }}</td>
+            <td>
+              <a href="/media/{{ .Id }}/edit" class="btn btn-primary btn-xs">
+                Edit
+              </a>
+              <a href="{{ .Id }}" class="delete-media btn btn-danger btn-xs">
+                Delete
+              </a>
+            </td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
     </div>
     <div class="tab-pane" id="new">
       <div class="col-md-6">
@@ -41,6 +61,8 @@
     var navbarList = $('.navbar-nav').children();
     navbarList.first().removeClass('active');
     navbarList.eq(1).addClass('active');
+
+    deleteItem("a.delete-media", "media", "/media/");
   });
 </script>
 {{ end }}

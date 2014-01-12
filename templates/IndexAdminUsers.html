@@ -32,21 +32,7 @@
 </div>
 <script>
   $(document).ready(function() {
-    $("a.delete-user").on("click", function(e) {
-      e.preventDefault()
-      e.stopPropagation()
-      self = this;
-      if (confirm("Are you sure you want to delete this user?")) { 
-        user_id = $(this).attr("href")
-        $.ajax({
-          url: "/admin/users/" + user_id,
-          type: "DELETE",
-          success: function() {
-            $(self).parent().parent().remove();
-          }
-        });
-      };
-    });
+    deleteItem("a.delete-user", "user", "/admin/users/");
   });
 
   $(document).ready(function() {
