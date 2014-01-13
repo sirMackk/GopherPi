@@ -9,6 +9,7 @@ import (
     "net/http"
     "log"
     "errors"
+    "encoding/json"
     "github.com/gorilla/mux"
     "github.com/gorilla/sessions"
     "database/sql"
@@ -373,14 +374,55 @@ func Authenticate(username, password string) (*models.User, error) {
 var logFile *os.File
 var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
-var store = sessions.NewCookieStore([]byte("2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"))
+var store *sessions.CookieStore
+var templateDir string
+var dbName string
+var logFileName string
+var port string
 var mediaDir = "users/"
 const STATIC_PATH = "static/"
 const APP_NAME = "gopher_pi"
 
+func initConfig() {
+    var config map[string]string
+    defaults := map[string]string{
+      "Port": "3000",
+      "Templates": "templates/",
+      "DbName": "gopher_pi.db",
+      "LogFile": "log.txt",
+      "CookieSecret": "secret",
+    }
+    file, err := os.Open("config.json")
+    defer func() {
+      if file != nil { file.Close() }
+    }()
+    if err != nil {
+      fmt.Println("Error opening configuration file, using defaults")
+      parseConfig(defaults)
+      return
+    }
+    configRead := make([]byte, 4096)
+    count, err := file.Read(configRead)
+    if err != nil {
+      fmt.Println("Error reading configuration file, using defaults")
+      parseConfig(defaults)
+      return
+    }
+    err = json.Unmarshal(configRead[:count], &config)
+    if err != nil { fmt.Println(err) }
+    parseConfig(config)
+}
+
+func parseConfig(config map[string]string) {
+    store = sessions.NewCookieStore([]byte(config["CookieSecret"]))
+    templateDir = config["Templates"]
+    dbName = config["DbName"]
+    logFileName = config["LogFile"]
+    port = fmt.Sprintf(":%s", config["Port"])
+}
+
 func setupLogging() {
-    //logFile, err := os.Create("log.txt")
-    logFile, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0600)
+    logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_WRONLY, 0600)
     if err != nil { panic(err) }
     log.SetOutput(logFile)
     log.Println("Setting up loggin and initiating server")
@@ -388,7 +430,7 @@ func setupLogging() {
 
 func setupDatabase() {
     var err error
-    db, err := sql.Open("sqlite3", fmt.Sprintf("./%s.db", APP_NAME))
+    db, err := sql.Open("sqlite3", dbName)
     if err != nil { panic(err) }
 
     dbmap = &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
@@ -414,9 +456,10 @@ func setupDatabase() {
 
 func init() {
     //setup database and templates and logging
+    initConfig()
     setupLogging()
     setupDatabase()
-    templates_ago.LoadTemplates("templates/", templates)
+    templates_ago.LoadTemplates(templateDir, templates)
 }
 
 func main() {
@@ -449,7 +492,7 @@ func main() {
 
     log.Println("routes set, about to handle")
     http.Handle("/", router)
-    err := http.ListenAndServe(":3000", nil)
+    err := http.ListenAndServe(port, nil)
     if err != nil { panic(err) }
 }
 

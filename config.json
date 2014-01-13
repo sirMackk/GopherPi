@@ -1,0 +1,7 @@
+{
+  "Port": "3000",
+  "Templates": "templates/",
+  "DbName": "gopher_pi.db",
+  "LogFile": "log.txt",
+  "CookieSecret": "2igIIhbR8nDmkDVR5dUU56rgCEjxKPCJ"
+}
