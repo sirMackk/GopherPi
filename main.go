@@ -447,6 +447,7 @@ func setupDatabase() {
     users, err := dbmap.SelectInt("select count(*) from users")
     if err != nil { panic(err) }
     if users == 0 {
+        log.Println("No db users - adding default admin with password 'password'")
         pwd := models.HashPwd("password")
         _, err := models.NewUser(dbmap, "admin", pwd, true)
         if err != nil {

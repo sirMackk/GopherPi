@@ -1,1 +1,0 @@
-../../VLCcontrols/jquery-vlc.js
