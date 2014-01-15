@@ -102,8 +102,6 @@ func StaticHandler(w http.ResponseWriter, req *http.Request) {
 //about
 func About(w http.ResponseWriter, req *http.Request, c Context) {
     templates["about.html"].ExecuteTemplate(w, "base", c)
-    //err := templates.Execute(w, make(map[string]string));
-    //if err != nil { panic(err) }
 }
 
 //media and ordinary users
@@ -133,6 +131,7 @@ func NewMedia(w http.ResponseWriter, req *http.Request, c Context) {
       templates.Execute(w, nil)
     case "POST":
       session, _ := store.Get(req, APP_NAME)
+      log.Println(fmt.Sprintf("New media %s created by user id %s", req.FormValue("title")))
       media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%d", session.Values["user_id"]))
       http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
     }
@@ -192,8 +191,10 @@ func EditMedia(w http.ResponseWriter, req *http.Request, c Context) {
             media.Private = private
             _, err = dbmap.Update(&media)
             if err != nil { panic(err) }
+            log.Println(fmt.Sprintf("Media %d - %s updated by %d %s", media.Id, media.Title, user.Id, user.Username))
             http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 301)
         } else {
+            log.Println(fmt.Sprintf("Failed attempt to update media %d - %s by %d %s", media.Id, media.Title, user.Id, user.Username))
             http.Error(w, "Verbotten!", 403)
         }
     }
@@ -243,6 +244,7 @@ func NewAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     case "POST":
       //sum validations
       user := models.NewUserFromRequest(dbmap, req)
+      log.Println(fmt.Sprintf("New user - %d %s - created!", user.Id, user.Username))
       http.Redirect(w, req, fmt.Sprintf("/admin/users/%d", user.Id), 301)
     }
 }
@@ -266,7 +268,6 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
       c["Stats"] = stats
       templates.Execute(w, c)
     case "DELETE":
-        fmt.Println("deleting")
         _, err := dbmap.Exec("delete from users where Id = ?", id)
         if err != nil { panic(err) }
         log.Println(fmt.Sprintf("Deleting user %s", id))
@@ -289,6 +290,7 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
       user.Admin = models.ParseCheckBox(req.FormValue("is-admin"))
       _, err := dbmap.Update(&user)
       if err != nil { panic(err) }
+      log.Println(fmt.Sprintf("User %d %s updated", user.Id, user.Username))
       http.Redirect(w, req, fmt.Sprintf("/admin/users/%s", id), 302)
     }
 }
@@ -309,6 +311,7 @@ func ServeMedia(w http.ResponseWriter, req *http.Request) {
         log.Println(fmt.Sprintf("Serving media id %s", vars["id"]))
         http.ServeFile(w, req, obj.(*models.Media).Path)
     } else {
+        log.Println(fmt.Sprintf("Media with id %s not found", vars["id"]))
         http.Error(w, "File not found", 404)
     }
 }
@@ -349,7 +352,7 @@ func Logout(w http.ResponseWriter, req *http.Request) {
     session.Options = &sessions.Options{MaxAge: -1}
     err := session.Save(req, w)
     if err != nil { panic(err) }
-    log.Println(fmt.Sprintf("User %d - %s logged in", user_id, username))
+    log.Println(fmt.Sprintf("User %d - %s logged out", user_id, username))
     http.Redirect(w, req, "/login", 302)
 }
 
