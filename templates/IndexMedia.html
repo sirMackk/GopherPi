@@ -1,22 +1,46 @@
 {{ define "body" }}
 <h1>All Public Media</h1>
 <hr>
-<div class="row" data-ng-app="gopher_pi">
-  <div class="col-md-6" data-ng-controller="mediaIndexCtrl">
-    <table class="table table-striped table-hover">
+<div class="row">
+  <div class="col-md-6">
+    <form class="form-inline">
+      <fieldset>
+        <div class="form-group">
+          <label class="sr-only">Filter list</label>
+          <input id="main-media-input" type="text" value="" class="form-control" placeholder="Filter list">
+        </div>
+      </fieldset>
+    </form>
+    <p id="total">Total: <span></span></p>
+  </div>
+</div>
+<hr>
+<div class="row">
+  <div class="col-md-6">
+    <table id="main-media" class="table table-striped table-hover">
       <thead>
         <th>No.</th>
         <th>Title</th>
+        <th>Type</th>
       </thead>
       <tbody>
         {{ range .Media }}
         <tr>
           <td>{{ .Id }}</td>
           <td><a href="/media/{{ .Id }}">{{ .Title }}</a></td>
+          <td>{{ .Type }}</td>
         </tr>
         {{ end }}
       </tbody>
     </table>
   </div>
 </div>
+<script>
+  $(document).ready(function() {
+    $("#main-media-input").fastLiveFilter("#main-media tbody", { 
+      callback: function(total) { $("#total span").html(total) }
+    });
+  });
+</script>
+
 {{ end }}

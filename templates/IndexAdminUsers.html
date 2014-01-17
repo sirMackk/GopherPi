@@ -1,11 +1,24 @@
 {{ define "body" }}
 <h1>Admin Users</h1>
 <hr>
-<a href="/admin/users/new" class="btn btn-primary">Create New User</a>
+<div class="row">
+  <div class="col-md-4">
+    <a href="/admin/users/new" class="btn btn-primary pull-right">Create New User</a>
+    <form class="form-inline">
+      <fieldset>
+        <div class="form-group">
+          <label class="sr-only">Filter list</label>
+          <input id="admin-users-input" type="text" value="" class="form-control" placeholder="Filter list">
+        </div>
+      </fieldset>
+    </form>
+    <p id="total">Total: <span></span></p>
+  </div>
+</div>
 <hr>
 <div class="row">
   <div class="col-md-8">
-    <table class="table table-striped table-hover">
+    <table id="admin-users" class="table table-striped table-hover">
       <thead>
         <th>User Id</th>
         <th>Username</th>
@@ -33,13 +46,14 @@
 <script>
   $(document).ready(function() {
     deleteItem("a.delete-user", "user", "/admin/users/");
-  });
 
-  $(document).ready(function() {
     var navbarList = $('.navbar-admin .navbar-nav').children();
     navbarList.first().removeClass('active');
     navbarList.eq(1).addClass('active');
-  });
 
+    $("#admin-users-input").fastLiveFilter("#admin-users tbody", { 
+      callback: function(total) { $("#total span").html(total) }
+    });
+  });
 </script>
 {{ end }}

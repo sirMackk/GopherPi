@@ -106,7 +106,6 @@ func About(w http.ResponseWriter, req *http.Request, c Context) {
 
 //media and ordinary users
 func IndexMedia(w http.ResponseWriter, req *http.Request, c Context) {
-    log.Println(c["User"])
     var media []models.Media
     _, err := dbmap.Select(&media, "select * from media order by Id")
     if err != nil { panic(err) }
