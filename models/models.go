@@ -45,7 +45,6 @@ func NewMedia(dbmap *gorp.DbMap, uid uint64, title, m_type, path string, priv bo
 }
 
 func NewMediaFromRequest(dbmap *gorp.DbMap, req *http.Request, user_id string) *Media {
-      log.Println(user_id)
       file, header, err := req.FormFile("file")
       if err != nil { panic(err) }
       f_path := fmt.Sprintf("users/%s/video/%s", user_id, header.Filename)
@@ -58,7 +57,7 @@ func NewMediaFromRequest(dbmap *gorp.DbMap, req *http.Request, user_id string) *
       title := req.FormValue("title")
       private := false
       m_type := "video"
-      uid, err := strconv.ParseUint(fmt.Sprintf("%d", user_id), 10, 64)
+      uid, err := strconv.ParseUint(user_id, 10, 64)
       media, err := NewMedia(dbmap, uid, title, m_type, f_path, private)
       if err != nil { panic(err) }
       return media

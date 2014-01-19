@@ -13,7 +13,7 @@ import (
     "github.com/gorilla/mux"
     "github.com/gorilla/sessions"
     "database/sql"
-    _ "github.com/lib/pq"
+    _ "github.com/go-sql-driver/mysql"
     "github.com/coopernurse/gorp"
     "github.com/sirMackk/templates_ago"
 )
@@ -46,7 +46,7 @@ func setContext(function AuthHandleFunc) HandleFunc {
         context := make(Context)
         if session.Values["loggedin"] == true {
             var user models.User
-            err := dbmap.SelectOne(&user, "select * from users where id = $1", session.Values["user_id"])
+            err := dbmap.SelectOne(&user, "select * from users where id = ?", session.Values["user_id"])
             context["User"] = &user
             if err != nil { panic(err) }
         }
@@ -117,7 +117,7 @@ func IndexMedia(w http.ResponseWriter, req *http.Request, c Context) {
 func IndexOwnMedia(w http.ResponseWriter, req *http.Request, c Context) {
     user_id := c["User"].(*models.User).Id
     var media []models.Media
-    _, err := dbmap.Select(&media, "select * from media where user_id = $1 order by Id desc", user_id)
+    _, err := dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", user_id)
     c["Media"] = &media
     if err != nil { panic(err) }
     err = templates.Execute(w, c)
@@ -130,7 +130,6 @@ func NewMedia(w http.ResponseWriter, req *http.Request, c Context) {
       templates.Execute(w, nil)
     case "POST":
       session, _ := store.Get(req, APP_NAME)
-      log.Println(fmt.Sprintf("New media %s created by user id %s", req.FormValue("title")))
       media := models.NewMediaFromRequest(dbmap, req, fmt.Sprintf("%d", session.Values["user_id"]))
       http.Redirect(w, req, fmt.Sprintf("/media/%d", media.Id), 200)
     }
@@ -140,7 +139,7 @@ func NewMedia(w http.ResponseWriter, req *http.Request, c Context) {
 func ShowMedia(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
     var media models.Media
-    err := dbmap.SelectOne(&media, "select * from media where Id = $1", vars["id"])
+    err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
     c["Media"] = media
     if media.Private == true {
@@ -171,7 +170,7 @@ func EditMedia(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
 
     var media models.Media
-    err := dbmap.SelectOne(&media, "select * from media where Id = $1", vars["id"])
+    err := dbmap.SelectOne(&media, "select * from media where Id = ?", vars["id"])
     if err != nil { panic(err) }
     c["Media"] = media
 
@@ -254,11 +253,11 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     switch req.Method {
     case "GET":
       var user models.User
-      err := dbmap.SelectOne(&user, "select * from users where Id = $1", id)
+      err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
       if err != nil { panic(err) }
       c["ShowUser"] = user
       var media []models.Media
-      _, err = dbmap.Select(&media, "select * from media where user_id = $1 order by Id desc", id)
+      _, err = dbmap.Select(&media, "select * from media where user_id = ? order by Id desc", id)
       if err != nil { panic(err) }
       c["Media"] = media
       stats := map[string]int{
@@ -267,7 +266,7 @@ func ShowAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
       c["Stats"] = stats
       templates.Execute(w, c)
     case "DELETE":
-        _, err := dbmap.Exec("delete from users where Id = $1", id)
+        _, err := dbmap.Exec("delete from users where Id = ?", id)
         if err != nil { panic(err) }
         log.Println(fmt.Sprintf("Deleting user %s", id))
     }
@@ -277,7 +276,7 @@ func EditAdminUsers(w http.ResponseWriter, req *http.Request, c Context) {
     vars := mux.Vars(req)
     id := vars["id"]
     var user models.User
-    err := dbmap.SelectOne(&user, "select * from users where Id = $1", id)
+    err := dbmap.SelectOne(&user, "select * from users where Id = ?", id)
     if err != nil { panic(err) }
     c["Edit"] = user
     switch req.Method {
@@ -357,7 +356,7 @@ func Logout(w http.ResponseWriter, req *http.Request) {
 
 func Authenticate(username, password string) (*models.User, error) {
     var user models.User
-    err := dbmap.SelectOne(&user, "select * from users where username = $1", username)
+    err := dbmap.SelectOne(&user, "select * from users where username = ?", username)
     if err != nil {
         return nil, errors.New("invalid username")
     }
@@ -377,38 +376,24 @@ var logFile *os.File
 var dbmap *gorp.DbMap
 var templates = templates_ago.NewTemplates()
 var store *sessions.CookieStore
-var templateDir string
-var dbName string
-var logFileName string
-var port string
+var templateDir, dbName, logFileName, port, dbUser, dbPassword string
 var mediaDir = "users/"
 const STATIC_PATH = "static/"
 const APP_NAME = "gopher_pi"
 
 func initConfig() {
     var config map[string]string
-    defaults := map[string]string{
-      "Port": "3000",
-      "Templates": "templates/",
-      "DbName": "gopher_pi.db",
-      "LogFile": "log.txt",
-      "CookieSecret": "secret",
-    }
     file, err := os.Open("config.json")
     defer func() {
       if file != nil { file.Close() }
     }()
     if err != nil {
-      fmt.Println("Error opening configuration file, using defaults")
-      parseConfig(defaults)
-      return
+      panic("Unable to load config.json file, exiting")
     }
     configRead := make([]byte, 4096)
     count, err := file.Read(configRead)
     if err != nil {
-      fmt.Println("Error reading configuration file, using defaults")
-      parseConfig(defaults)
-      return
+      panic("Unable to read config.json file, exiting")
     }
     err = json.Unmarshal(configRead[:count], &config)
     if err != nil { fmt.Println(err) }
@@ -420,6 +405,8 @@ func parseConfig(config map[string]string) {
     templateDir = config["Templates"]
     dbName = config["DbName"]
     logFileName = config["LogFile"]
+    dbUser = config["DbUser"]
+    dbPassword = config["DbPassword"]
     port = fmt.Sprintf(":%s", config["Port"])
 }
 
@@ -432,12 +419,10 @@ func setupLogging() {
 
 func setupDatabase() {
     var err error
-    //db, err := sql.Open("sqlite3", dbName)
-    db, err := sql.Open("postgres", "user=ryan password=a dbname=pi host=localhost")
+    db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@/%s", dbUser, dbPassword, dbName))
     if err != nil { panic(err) }
 
-    //dbmap = &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
-    dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
+    dbmap = &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{"InnoDB", "UTF8"}}
 
     dbmap.AddTableWithName(models.User{}, "users").SetKeys(true, "Id")
     dbmap.AddTableWithName(models.Media{}, "media").SetKeys(true, "Id")
